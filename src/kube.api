@@ -1,0 +1,63 @@
+-include("sender.hrl").
+
+%%%% Orchestrate Api -----------------------------------------------------------------------------
+%% kube:load_provider(ProviderSpec,HostSpec)
+-define(Orchestrate_Result(Result,Node,RpcTimeout),
+	rpc:call(Node,kube,orchestrate_result,[Result,?Sender],RpcTimeout)).
+
+%%%% Provider Api -----------------------------------------------------------------------------
+
+%% kube:load_provider(ProviderSpec,HostSpec)
+-define(Kube_Load_Provider(ProviderSpec,HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,load_provider,[ProviderSpec,HostSpec,?Sender],RpcTimeout)).
+
+%% kube:unload_provider(ProviderSpec,HostSpec)
+-define(Kube_UnLoad_Provider(ProviderSpec,HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,unload_provider,[ProviderSpec,HostSpec,?Sender],RpcTimeout)).
+
+%% kube:start_provider(ProviderSpec,HostSpec)
+-define(Kube_Start_Provider(ProviderSpec,HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,start_provider,[ProviderSpec,HostSpec,?Sender],RpcTimeout)).
+
+%% kube:stop_provider(ProviderSpec,HostSpec)
+-define(Kube_Stop_Provider(ProviderSpec,HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,stop_provider,[ProviderSpec,HostSpec,?Sender],RpcTimeout)).
+
+%% kube:is_started_provider(ProviderSpec,HostSpec)
+-define(Kube_Is_Started_Provider(ProviderSpec,HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,is_started_provider,[ProviderSpec,HostSpec,?Sender],RpcTimeout)).
+
+
+%% kube:is_loaded_provider(ProviderSpec,HostSpec)
+-define(Kube_Is_Loaded_Provider(ProviderSpec,HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,is_loaded_provider,[ProviderSpec,HostSpec,?Sender],RpcTimeout)).
+
+
+%% Controller Api ----------------------------------------------------------------------------
+
+%% kube:start_host_controller(HostSpec)
+-define(Kube_Start_Host_Controller(HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,start_host_controller,[HostSpec,?Sender],RpcTimeout)).
+
+%% kube:stop_host_controller(HostSpec)
+-define(Kube_Stop_Host_Controller(HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,stop_host_controller,[HostSpec,?Sender],RpcTimeout)).
+
+%% kube:is_started_host_controller(ProviderSpec,HostSpec)
+-define(Kube_Is_Started_Host_Controller(HostSpec,Node,RpcTimeout),
+	rpc:call(Node,kube,is_started_host_controller,[HostSpec,?Sender],RpcTimeout)).
+
+%% Gen server Api ------------------------------------------------------------------------------
+
+%% kube:start()
+-define(Kube_Start(Node,RpcTimeout),
+	rpc:call(Node,kube,start,[?Sender],RpcTimeout)).
+
+%% kube:stop()
+-define(Kube_Stop(Node,RpcTimeout),
+	rpc:call(Node,kube,stop,[?Sender],RpcTimeout)).
+
+
+%% kube:ping()
+-define(Kube_Ping(Node,RpcTimeout),
+	rpc:call(Node,kube,ping,[?Sender],RpcTimeout)).

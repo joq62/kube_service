@@ -1,0 +1,324 @@
+%%% -------------------------------------------------------------------
+%%% Author  : uabjle
+%%% Description : resource discovery accroding to OPT in Action 
+%%% This service discovery is adapted to 
+%%% Type = application 
+%%% Instance ={ip_addr,{IP_addr,Port}}|{erlang_node,{ErlNode}}
+%%% 
+%%% Created : 10 dec 2012
+%%% -------------------------------------------------------------------
+-module(lib_kube).
+ 
+
+%% --------------------------------------------------------------------
+%% Include files
+%% --------------------------------------------------------------------
+-define(TimeOut,30*1000).
+
+-include_lib("kernel/include/inet.hrl").
+%% --------------------------------------------------------------------
+
+%% External exports
+-export([
+	 ssh_start_nodes/2,
+	 ssh_create_node/2,
+	 ssh_create_node/5
+	]).
+-export([
+	 load_provider/2,
+	 start_provider/2,
+	 unload_provider/2,
+	 stop_provider/2
+	 
+	]).
+
+-export([
+	 active_nodes/0,
+	 active/1,
+	 stopped_nodes/0,
+	 stopped/1
+	]).
+
+
+%% ====================================================================
+%% External functions
+%% ====================================================================
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+load(ProviderSpec,HostSpec)->
+    ProviderExists=db_provider_spec:member(ProviderSpec),
+    HostSpecExists=db_host_spec:member(HostSpec),
+    Result=case {ProviderExists,HostSpecExists} of
+	       {false,_}->
+		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]};
+	       {_,false}->
+		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]};
+	       {true,true}->
+		   {ok,HostNode}=db_host_spec:read(connect_node,HostSpec),
+		   %% 
+		   {ok,ProviderDir}=db_provider_spec:read(dir,ProviderSpec),
+		   case rpc:call(HostNode,file,del_dir_r,[ProviderDir],5000) of
+		       {badrpc,Reason}->
+			   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+		       {error,Reason}->
+			   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+		       _ ->
+			   {ok,GitPath}=db_provider_spec:read(git_path,ProviderSpec),
+			   case rpc:call(HostNode,os,cmd,["git clone "++GitPath],20*1000) of
+			       {badrpc,Reason}->
+				   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+			       {error,Reason}->
+				   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+			       _->
+				   {ok,TarCmd}=db_provider_spec:read(tar_cmd,ProviderSpec),
+				   case rpc:call(HostNode,os,cmd,[TarCmd],20*1000) of
+				       {badrpc,Reason}->
+					   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+				       {error,Reason}->
+					   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+				       _-> 
+					   %% start slave
+					   {ok,ProviderNodeName}=db_provider_spec:read(node_name,ProviderSpec),
+					   {ok,CookieStr}=db_provider_spec:read(cookie,ProviderSpec),
+					   {ok,PaArgs}=db_provider_spec:read(pa_args,ProviderSpec),
+					   {ok,HostName}=db_host_spec:read(hostname,HostSpec),
+					   EnvArgs=" ",
+					   Args=PaArgs++" "++"-setcookie "++CookieStr++" "++EnvArgs,
+					   io:format(" ~p~n",[{HostName,ProviderNodeName,Args,?MODULE,?LINE}]),
+					   ProviderNode=list_to_atom(ProviderNodeName++"@"++HostName),
+					   
+					   rpc:call(ProviderNode,init,stop,[],5000),
+
+					   timer:sleep(3000),
+					   case rpc:call(HostNode,slave,start,[HostName,ProviderNodeName,Args],10*1000) of
+					       {error,Reason}->
+						   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+					       {ok,ProviderNode}->
+						   {ok,App}=db_provider_spec:read(app,ProviderSpec),
+						   case rpc:call(ProviderNode,code,is_loaded,[App],10*1000)of
+						       {badrpc,Reason}->
+							   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+						       {file,_}->
+							   {error,["Already loaded",App,?MODULE,?FUNCTION_NAME,?LINE]};
+						       false->
+							   case rpc:call(ProviderNode,application,load,[App],10*1000)of
+							       {badrpc,Reason}->
+								   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+							       {error,Reason}->
+								   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+							       ok->
+								   case [App||{WApp,_,_}<-rpc:call(ProviderNode,application,loaded_applications,[],10*1000),
+									      WApp==App] of
+								       []->
+									   {error,["Failed to load ",App,?MODULE,?FUNCTION_NAME,?LINE]};
+								       [App]->	  
+									   {ok,ProviderNode,App}
+								   end
+							   end
+						   end
+					   end
+				   end
+			   end
+		   end
+	   end,
+   % io:format("Load result  ~p~n",[{Result,?MODULE,?FUNCTION_NAME}]),
+    Result.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+stop_provider(ProviderSpec,HostSpec)->
+    ProviderExists=db_provider_spec:member(ProviderSpec),
+    HostSpecExists=db_host_spec:member(HostSpec),
+    Result=case {ProviderExists,HostSpecExists} of
+	       {false,_}->
+		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]};
+	       {_,false}->
+		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]};
+	       {true,true}->
+		   case is_stopped_provider(ProviderSpec,HostSpec) of
+		       false->
+			   {error,["Not stopped provider ",ProviderSpec,HostSpec]};
+		       true->
+			   case is_loaded_provider(ProviderSpec,HostSpec) of
+			       error->
+				   {error,["Not unloaded provider ",ProviderSpec,HostSpec]};
+			       true->
+				   {ok,HostNode}=db_host_spec:read(connect_node,HostSpec),  
+				   {ok,ProviderNode}=b_provider_spec:read(provider,ProviderSpec),
+				   {ok,App}=db_provider_spec:read(app,ProviderSpec),
+				   case rpc:call(HostNode,slave,stop,[ProviderNode],10*1000)of
+				       {badrpc,Reason}->
+					   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+				       {error,Reason}->
+					   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+				       ok->
+					   ok
+				   end
+			   end
+		   end
+	   end,		       
+    Result.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+unload_provider(ProviderSpec,HostSpec)->
+    ProviderExists=db_provider_spec:member(ProviderSpec),
+    HostSpecExists=db_host_spec:member(HostSpec),
+    Result=case {ProviderExists,HostSpecExists} of
+	       {false,_}->
+		   {error,["eexists ",{ProviderExists,Provider},{HostSpecExists,HostSpec}]};
+	       {_,false}->
+		   {error,["eexists ",{ProviderExists,Provider},{HostSpecExists,HostSpec}]};
+	       {true,true}->
+		   case is_loaded_provider(ProviderSpec,HostSpec) of
+		       false->
+			   {error,["Not loaded provider ",ProviderSpec,HostSpec]};
+		       true->
+			   {ok,HostNode}=db_host_spec:read(connect_node,HostSpec),  
+			   {ok,ProviderDir}=db_provider_spec:read(dir,Provider),
+			   {ok,App}=db_provider_spec:read(app,Provider),
+			   case rpc:call(HostNode,file,del_dir_r,[ProviderDir],10*1000)of
+			       {badrpc,Reason}->
+				   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+			       {error,Reason}->
+				   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+			       ok->
+				   case rpc:call(HostNode,application,unload,[App],10*1000)of
+				       {badrpc,Reason}->
+					   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+				       {error,Reason}->
+					   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+				       ok->
+					   ok
+				   end
+			   end
+		   end
+	   end,		       
+    Result.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+start_provider(ProviderSpec,HostSpec)->
+    {ok,App}=db_provider_spec:read(app,ProviderSpec),
+    {ok,ProviderNodeName}=db_provider_spec:read(node_name,ProviderSpec),
+    {ok,HostName}=db_host_spec:read(hostname,HostSpec),
+    ProviderNode=list_to_atom(ProviderNodeName++"@"++HostName),
+    Result=case [App||{WApp,_,_}<-rpc:call(ProviderNode,application,loaded_applications,[],10*1000),
+		      WApp==App] of
+	       []->
+		   {error,["Failed to load ",App,?MODULE,?FUNCTION_NAME,?LINE]};
+	       [App]->	  
+		   case rpc:call(ProviderNode,application,start,[App],30*1000)of
+		       {badrpc,Reason}->
+			   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+		       {error,Reason}->
+			   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+		       ok->
+			   ok
+		   end
+	   end,
+    Result.
+
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+ssh_start_nodes(HostSpecs,CookieStr)->
+    ssh_start_nodes(HostSpecs,CookieStr,[]).
+
+ssh_start_nodes([],_,Acc)->
+    Acc;
+ssh_start_nodes([HostSpec|T],CookieStr,Acc) ->
+    Result=ssh_create_node(HostSpec,CookieStr),
+    ssh_start_nodes(T,CookieStr,[Result|Acc]).
+
+ssh_create_node(HostSpec,CookieStr)->
+    PaArgs=" ",
+    EnvArgs="  ",
+    {ok,Node}=db_host_spec:read(connect_node,HostSpec),
+    rpc:call(Node,init,stop,[]),
+    timer:sleep(3000),
+    {ok,NodeName}=db_host_spec:read(connect_node_name,HostSpec),
+    ssh_create_node(HostSpec,NodeName,CookieStr,PaArgs,EnvArgs).
+
+ssh_create_node(HostSpec,NodeName,CookieStr,PaArgs,EnvArgs)->
+    {ok,Ip}=db_host_spec:read(local_ip,HostSpec),
+    {ok,SshPort}=db_host_spec:read(ssh_port,HostSpec),
+    {ok,Uid}=db_host_spec:read(uid,HostSpec),
+    {ok,Pwd}=db_host_spec:read(passwd,HostSpec),
+    ErlCmd="erl "++PaArgs++" "++"-sname "++NodeName++" "++"-setcookie"++" "++CookieStr++" "++EnvArgs++" "++" -detached",
+    {ok,HostName}=db_host_spec:read(hostname,HostSpec),
+    Node=list_to_atom(NodeName++"@"++HostName),
+    CreateResult={my_ssh:ssh_send(Ip,SshPort,Uid,Pwd,ErlCmd,?TimeOut),Node,HostSpec},
+    %% connect
+    Result=case CreateResult of
+	       {ok,Node,_}->
+		   case net_adm:ping(Node) of
+		       pang->
+			   {error,["Failed to connect ",Node,HostSpec]};
+		       pong->
+			   {ok,Node,HostSpec}
+		   end;
+	       Reason->
+		   {error,["Failed to create vm ",Reason,Node,HostSpec]}
+	   end,   
+    Result.
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+active_nodes()->
+    [HostSpec||HostSpec<-db_host_spec:get_all_id(),
+	       true==active(HostSpec)].
+
+active(HostSpec)->
+    Result=case db_host_spec:read(connect_node,HostSpec) of
+	       {error,Reason}->
+		   {error,["Failed to read connect_node ",HostSpec,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+	       {ok,Node}->
+		   case net_adm:ping(Node) of
+		       pang->
+			   false;
+		       pong->
+			   true
+		   end
+	   end,
+    Result.
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+stopped_nodes()->
+    [HostSpec||HostSpec<-db_host_spec:get_all_id(),
+	       true==stopped(HostSpec)].
+
+stopped(HostSpec)->
+    Result=case db_host_spec:read(connect_node,HostSpec) of
+	       {error,Reason}->
+		   {error,["Failed to read connect_node ",HostSpec,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+	       {ok,Node}->
+		   case net_adm:ping(Node) of
+		       pang->
+			   true;
+		       pong->
+			   false
+		   end
+	   end,
+    Result.
