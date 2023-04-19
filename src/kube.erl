@@ -24,13 +24,13 @@
 	 stop_controller/1,
 	 is_controller_started/1,
 %% provider
-%	 is_loaded/2,
-%	 load_provider/2,
-%	 is_started/2,
+	 is_provider_loaded/2,
+	 load_provider/2,
+%	 is_provider_started/2,
 %	 start_provider/2,
-%	 is_stopped/2,
+%	 is_provider_stopped/2,
 %	 stop_provider/2,
-%	 is_unloaded/2,
+%	 is_provider_unloaded/2,
 %	 unload_provider/2,
 %	 where_is_provider/1,
 %log
@@ -53,6 +53,17 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+load_provider(ProviderSpec,HostSpec)->
+    gen_server:call(?SERVER, {load_provider,ProviderSpec,HostSpec},infinity).
+is_provider_loaded(ProviderSpec,HostSpec)->
+    gen_server:call(?SERVER, {is_provider_loaded,ProviderSpec,HostSpec},infinity).
+
+
 %%--------------------------------------------------------------------
 %% @doc
 %% @spec
@@ -110,6 +121,19 @@ init([]) ->
     
     {ok, #state{}}.
 
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+handle_call({load_provider,ProviderSpec,HostSpec}, _From, State) ->
+    Reply=lib_provider:load(ProviderSpec,HostSpec),
+    {reply, Reply, State};
+
+handle_call({is_provider_loaded,ProviderSpec,HostSpec}, _From, State) ->
+    Reply=lib_provider:is_loaded(ProviderSpec,HostSpec),
+    {reply, Reply, State};
 
 %%--------------------------------------------------------------------
 %% @doc

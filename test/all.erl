@@ -25,7 +25,8 @@
 start()->
    
     ok=setup(),
-    ok=host_test:start(),
+ %   ok=host_test:start(),
+    ok=provider_test:start(),
     
     io:format("Test OK !!! ~p~n",[?MODULE]),
     timer:sleep(2000),

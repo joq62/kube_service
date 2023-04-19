@@ -11,23 +11,26 @@
 %%% -------------------------------------------------------------------
 -module(provider_test).      
   
--export([start/1]).
+-export([start/0]).
 %% --------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
+-define(DBETCD,dbetcd_appl).
 
+-define(DbEtcdSpec,"dbetcd_appl").
+-define(HostSpecs,["c200","c201"]).
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-start(Node)->
+start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
 
-    ok=setup(Node),
-    ok=read_specs_test(Node),
-  
+    ok=setup(),
+    ok=load_start_stop_unload(?DbEtcdSpec),
+ 
     io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
 
     ok.
@@ -38,44 +41,23 @@ start(Node)->
 %% Description: Based on hosts.config file checks which hosts are avaible
 %% Returns: List({HostId,Ip,SshPort,Uid,Pwd}
 %% --------------------------------------------------------------------
-read_specs_test(Node)->
-    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
+load_start_stop_unload(ProviderSpec)->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+   
+    [C200,C201]=?HostSpecs,
+    [false,false]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
     
-    AllProviders=lists:sort(rpc:call(Node,db_provider_spec,get_all_id,[],5000)),
-%    io:format("AllProviders ~p~n",[{AllProviders,?MODULE,?FUNCTION_NAME}]),
-    true=lists:member("dbetcd_appl",AllProviders),
+    io:format("load dbetcd_app on C200 and C201 ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok=kube:load_provider(ProviderSpec,C200),
+    [true,false]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    ok=kube:load_provider(ProviderSpec,C201),
+    [true,true]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
 
-    {
-     "dbetcd_appl","dbetcd_appl","0.1.0","dbetcd_appl",dbetcd_appl,
-     "dbetcd_appl","dbetcd_appl","a_cookie",
-     "https://github.com/joq62/dbetcd_appl.git",
-     " -pa dbetcd_appl/ebin -config dbetcd_appl/config/sys.config",
-     "tar -xvf dbetcd_appl/dbetcd_appl-0.1.0.tar.gz -C dbetcd_appl ",
-     {application,start,[dbetcd_appl],20000},
-     1,
-     [all_hosts]
-    }=rpc:call(Node,db_provider_spec,read,["dbetcd_appl"],5000),
     
-    {ok,"dbetcd_appl"}=rpc:call(Node,db_provider_spec,read,[spec,"dbetcd_appl"],5000),
-    {ok,"dbetcd_appl"}=rpc:call(Node,db_provider_spec,read,[appl_name,"dbetcd_appl"],5000),
-    {ok,"0.1.0"}=rpc:call(Node,db_provider_spec,read,[vsn,"dbetcd_appl"],5000),
-    {ok,"dbetcd_appl"}=rpc:call(Node,db_provider_spec,read,[app_name,"dbetcd_appl"],5000),
-    {ok,dbetcd_appl}=rpc:call(Node,db_provider_spec,read,[app,"dbetcd_appl"],5000),
-    {ok,"dbetcd_appl"}=rpc:call(Node,db_provider_spec,read,[dir,"dbetcd_appl"],5000),
-    {ok,"dbetcd_appl"}=rpc:call(Node,db_provider_spec,read,[node_name,"dbetcd_appl"],5000),
-    {ok,"a_cookie"}=rpc:call(Node,db_provider_spec,read,[cookie,"dbetcd_appl"],5000),
-    {ok," -pa dbetcd_appl/ebin -config dbetcd_appl/config/sys.config"}=rpc:call(Node,db_provider_spec,read,[pa_args,"dbetcd_appl"],5000),
-    {ok,"https://github.com/joq62/dbetcd_appl.git"}=rpc:call(Node,db_provider_spec,read,[git_path,"dbetcd_appl"],5000),
-    {ok,"tar -xvf dbetcd_appl/dbetcd_appl-0.1.0.tar.gz -C dbetcd_appl "}=rpc:call(Node,db_provider_spec,read,[tar_cmd,"dbetcd_appl"],5000),
-    {ok,{application,start,[dbetcd_appl],20000}}=rpc:call(Node,db_provider_spec,read,[start_cmd,"dbetcd_appl"],5000),
-    {ok,1}=rpc:call(Node,db_provider_spec,read,[num,"dbetcd_appl"],5000),
-    {ok, [all_hosts]}=rpc:call(Node,db_provider_spec,read,[affinity,"dbetcd_appl"],5000),
-    
- 
-    {error,[eexist,"glurk",db_provider_spec,_]}=rpc:call(Node,db_provider_spec,read,[dir,"glurk"],5000),
-    {error,['Key eexists',glurk,"dbetcd_appl",db_provider_spec,_]}=rpc:call(Node,db_provider_spec,read,[glurk,"dbetcd_appl"],5000),
- 
-       ok.
+    io:format("load dbetcd_app on C200 and C201 ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    [ok,ok]=[kube:unload_provider(ProviderSpec,HostSpec)||HostSpec<-?HostSpecs],
+    [false,false]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    ok.
 
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
@@ -84,9 +66,25 @@ read_specs_test(Node)->
 %% --------------------------------------------------------------------
 
 
-setup(Node)->
+setup()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
        
-    pong=rpc:call(Node,dbetcd,ping,[],5000),
-   
+    [C200,C201]=?HostSpecs,
+    {ok,ControllerNodeC200}=sd:call(?DBETCD,db_host_spec,read,[connect_node,C200],5000),
+    rpc:call(ControllerNodeC200,init,stop,[],5000),
+    {ok,ControllerNodeC201}=sd:call(?DBETCD,db_host_spec,read,[connect_node,C201],5000),
+    rpc:call(ControllerNodeC201,init,stop,[],5000),
+    timer:sleep(2000),   
+    
+    %% start controller 
+    [C200,C201]=?HostSpecs,
+    [false,false]=[kube:is_controller_started(HostSpec)||HostSpec<-[C200,C201]],
+
+    io:format("Start C200 and C201 ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    %% start C200
+    ok=kube:start_controller(C200),
+    [true,false]=[kube:is_controller_started(HostSpec)||HostSpec<-[C200,C201]],
+     %% start C201
+    ok=kube:start_controller(C201),
+    [true,true]=[kube:is_controller_started(HostSpec)||HostSpec<-[C200,C201]],
     ok.
