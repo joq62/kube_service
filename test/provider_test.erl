@@ -29,10 +29,9 @@ start()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
 
     ok=setup(),
-    ok=load_start_stop_unload(?DbEtcdSpec),
+    ok=load_start_stop_unload("test_appl"),
  
     io:format("Stop OK !!! ~p~n",[{?MODULE,?FUNCTION_NAME}]),
-
     ok.
 
 
@@ -43,7 +42,9 @@ start()->
 %% --------------------------------------------------------------------
 load_start_stop_unload(ProviderSpec)->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
-   
+    
+   % glurk=sd:call(?DBETCD,db_provider_spec,read_all,[],5000),
+
     [C200,C201]=?HostSpecs,
     [false,false]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
     
@@ -69,6 +70,8 @@ load_start_stop_unload(ProviderSpec)->
 setup()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
        
+    a_cookie=erlang:get_cookie(),
+
     [C200,C201]=?HostSpecs,
     {ok,ControllerNodeC200}=sd:call(?DBETCD,db_host_spec,read,[connect_node,C200],5000),
     rpc:call(ControllerNodeC200,init,stop,[],5000),

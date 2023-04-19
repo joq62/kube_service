@@ -86,12 +86,13 @@ load(ProviderSpec,HostSpec)->
 					   Args=PaArgs++" "++"-setcookie "++CookieStr++" "++EnvArgs,
 					   ProviderNode=list_to_atom(ProviderNodeName++"@"++HostName),
 					   rpc:call(ProviderNode,init,stop,[],5000),
+					  
 					   case vm:check_stopped_node(ProviderNode) of
 					       false->
 						   {error,["Failed to stop host controller node ",ProviderNode,?MODULE,?FUNCTION_NAME,?LINE]};
 					       true->
-						   
-						   case rpc:call(HostNode,slave,start,[HostName,ProviderNodeName,Args],5*1000) of
+						   io:format("HostNode,HostName,ProviderNodeName,Args ~p~n",[{rpc:call(HostNode,erlang,get_cookie,[],5000),HostNode,HostName,ProviderNodeName,Args,?MODULE,?FUNCTION_NAME,?LINE}]),	   
+						   case rpc:call(HostNode,slave,start,[HostName,ProviderNodeName,Args],10*1000) of
 						       {badrpc,Reason}->
 							   {error,[badrpc,Reason,ProviderSpec,HostSpec,?MODULE,?FUNCTION_NAME,?LINE]};
 						       {error,Reason}->

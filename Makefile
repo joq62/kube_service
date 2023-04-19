@@ -84,4 +84,4 @@ eunit:
 	    -config test/test_sys.config\
 	    -sname do_test\
 	    -run all start\
-	    -setcookie test_cookie
+	    -setcookie a_cookie
