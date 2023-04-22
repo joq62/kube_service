@@ -25,7 +25,7 @@
 start()->
    
     ok=setup(),
- %   ok=host_test:start(),
+  %  ok=host_test:start(),
     ok=provider_test:start(),
     
     io:format("Test OK !!! ~p~n",[?MODULE]),
@@ -49,7 +49,7 @@ start()->
 setup()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
    
-       
+    a_cookie=erlang:get_cookie(),
     ok=application:start(tests),
     pong=kube:ping(),
     pong=common:ping(),

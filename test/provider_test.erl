@@ -47,17 +47,36 @@ load_start_stop_unload(ProviderSpec)->
 
     [C200,C201]=?HostSpecs,
     [false,false]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    [false,false]=[kube:is_provider_started(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
     
-    io:format("load dbetcd_app on C200 and C201 ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    %% Load
+    io:format("load  on C200 and C201 ~p~n",[{ProviderSpec,?MODULE,?FUNCTION_NAME,?LINE}]),
     ok=kube:load_provider(ProviderSpec,C200),
     [true,false]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    [true,false]=[kube:is_provider_node_started(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
     ok=kube:load_provider(ProviderSpec,C201),
     [true,true]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    [true,true]=[kube:is_provider_node_started(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    [false,false]=[kube:is_provider_started(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    %% Start
+    io:format("start  on C200 and C201 ~p~n",[{ProviderSpec,?MODULE,?FUNCTION_NAME,?LINE}]),
+    ok=kube:start_provider(ProviderSpec,C200),
+    [true,true]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    [true,false]=[kube:is_provider_started(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    ok=kube:start_provider(ProviderSpec,C201),
+    [true,true]=[kube:is_provider_started(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
 
-    
-    io:format("load dbetcd_app on C200 and C201 ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
+    %% Stop
+    io:format("stop  on C200 and C201 ~p~n",[{ProviderSpec,?MODULE,?FUNCTION_NAME,?LINE}]),
+    [ok,ok]=[kube:stop_provider(ProviderSpec,HostSpec)||HostSpec<-?HostSpecs],
+    [true,true]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    [false,false]=[kube:is_provider_started(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+
+    %% Unload   
+    io:format("unload on C200 and C201 ~p~n",[{ProviderSpec,?MODULE,?FUNCTION_NAME,?LINE}]),
     [ok,ok]=[kube:unload_provider(ProviderSpec,HostSpec)||HostSpec<-?HostSpecs],
     [false,false]=[kube:is_provider_loaded(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
+    [false,false]=[kube:is_provider_started(ProviderSpec,HostSpec)||HostSpec<-[C200,C201]],
     ok.
 
 %% --------------------------------------------------------------------

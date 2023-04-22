@@ -65,7 +65,7 @@ start_controller(HostSpec)->
 		       false->
 			   {error,["Failed to stop host controller node ",HostControllerNode,?MODULE,?FUNCTION_NAME,?LINE]};
 		       true->
-			   PaArgs=" ",
+			   PaArgs=" -detached ",
 			   EnvArgs="  ",
 			   CookieStr=atom_to_list(erlang:get_cookie()),
 			   {ok,NodeName}=sd:call(?DBETCD,db_host_spec,read,[connect_node_name,HostSpec],5000),
@@ -142,21 +142,24 @@ ssh_create_node(HostSpec,NodeName,CookieStr,PaArgs,EnvArgs)->
     {ok,SshPort}=sd:call(?DBETCD,db_host_spec,read,[ssh_port,HostSpec],5000),
     {ok,Uid}=sd:call(?DBETCD,db_host_spec,read,[uid,HostSpec],5000),
     {ok,Pwd}=sd:call(?DBETCD,db_host_spec,read,[passwd,HostSpec],5000),
-    ErlCmd="erl "++PaArgs++" "++"-sname "++NodeName++" "++"-setcookie"++" "++CookieStr++" "++EnvArgs++" "++" -detached",
+    ErlCmd="erl "++PaArgs++" "++"-sname "++NodeName++" "++"-setcookie"++" "++CookieStr++" "++EnvArgs,
     {ok,HostName}=sd:call(?DBETCD,db_host_spec,read,[hostname,HostSpec],5000),
     Node=list_to_atom(NodeName++"@"++HostName),
-    CreateResult={my_ssh:ssh_send(Ip,SshPort,Uid,Pwd,ErlCmd,?TimeOut),Node,HostSpec},
-    %% connect
+ %   io:format("dbg Node,ErlCmd ~p~n",[{Node,HostName,ErlCmd,?MODULE,?LINE}]),
+    CreateResult=my_ssh:ssh_send(Ip,SshPort,Uid,Pwd,ErlCmd,?TimeOut),
     Result=case CreateResult of
-	       {ok,Node,_}->
-		   case net_adm:ping(Node) of
-		       pang->
-			   {error,["Failed to connect ",Node,HostSpec]};
-		       pong->
+						% {ok,Node,_}->
+						% io:format("dbg Node ~p~n",[{Node,?MODULE,?LINE}]),
+	       ok->
+		   case vm:check_started_node(Node) of
+		       false->
+			   {error,["Failed to connect ",Node,HostSpec,?MODULE,?FUNCTION_NAME,?LINE]};
+		       true->
 			   ok
-			  % {ok,Node,HostSpec}
+			%  {ok,Node}
 		   end;
 	       Reason->
+		   glurk=Reason,
 		   {error,["Failed to create vm ",Reason,Node,HostSpec]}
 	   end,   
     Result.
@@ -192,7 +195,7 @@ create_node(HostSpec,NodeName,CookieStr,PaArgs,EnvArgs)->
     ErlCmd="erl "++PaArgs++" "++"-sname "++NodeName++" "++"-setcookie"++" "++CookieStr++" "++EnvArgs++" "++" -detached",
     {ok,HostName}=sd:call(?DBETCD,db_host_spec,read,[hostname,HostSpec],5000),
     Node=list_to_atom(NodeName++"@"++HostName),
-    CreateResult={my_ssh:ssh_send(Ip,SshPort,Uid,Pwd,ErlCmd,?TimeOut),Node,HostSpec},
+    CreateResult=my_ssh:ssh_send(Ip,SshPort,Uid,Pwd,ErlCmd,?TimeOut),
     %% connect
     Result=case CreateResult of
 	       {ok,Node,_}->
@@ -200,9 +203,11 @@ create_node(HostSpec,NodeName,CookieStr,PaArgs,EnvArgs)->
 		       pang->
 			   {error,["Failed to connect ",Node,HostSpec]};
 		       pong->
-			   {ok,Node,HostSpec}
+			   ok
+			   %{ok,Node,HostSpec}
 		   end;
 	       Reason->
+		   glurk=Reason,
 		   {error,["Failed to create vm ",Reason,Node,HostSpec]}
 	   end,   
     
