@@ -116,8 +116,7 @@ load(ProviderSpec,HostSpec)->
 									       false->
 										  {error,["Not loaded  ",App,?MODULE,?FUNCTION_NAME,?LINE]};
 									       true->
-										   ok
-										 %  {ok,ProviderNode,App}
+										   {ok,ProviderSpec,HostSpec,ProviderNode,App}
 									   end
 								   end
 							   end
