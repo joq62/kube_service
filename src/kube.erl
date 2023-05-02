@@ -24,6 +24,14 @@
 	 stop_controller/1,
 	 is_controller_started/1,
 %% provider
+	 create_provider/2,
+	 delete_provider/2,
+	 wanted_state_from_file/1,
+
+	 create_deployment_from_file/1,
+	 delete_deployment_from_file/1,
+	 
+
 	 is_provider_loaded/2,
 	 load_provider/2,
 	 unload_provider/2,
@@ -56,6 +64,26 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+create_deployment_from_file(FullPathFile)->
+    gen_server:call(?SERVER, {create_deployment_from_file,FullPathFile},infinity).
+delete_deployment_from_file(FullPathFile)->
+    gen_server:call(?SERVER, {delete_deployment_from_file,FullPathFile},infinity).
+wanted_state_from_file(FullPathFile)->
+    gen_server:call(?SERVER, {wanted_state_from_file,FullPathFile},infinity).
+
+
+create_provider(ProviderSpec,HostSpec)->
+    gen_server:call(?SERVER, {create_provider,ProviderSpec,HostSpec},infinity).
+delete_provider(ProviderSpec,HostSpec)->
+    gen_server:call(?SERVER, {delete_provider,ProviderSpec,HostSpec},infinity).
+
+    
+
 %%--------------------------------------------------------------------
 %% @doc
 %% @spec
@@ -140,6 +168,30 @@ init([]) ->
      
     
     {ok, #state{}}.
+%%--------------------------------------------------------------------
+%% @doc2
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+
+handle_call({create_deployment_from_file,FullPathFile}, _From, State) ->
+    Reply=lib_provider:create_deployment_from_file(FullPathFile),
+    {reply, Reply, State};
+
+handle_call({delete_deployment_from_file,FullPathFile}, _From, State) ->
+    Reply=lib_provider:delete_deployment_from_file(FullPathFile),
+    {reply, Reply, State};
+
+handle_call({wanted_state_from_file,FullPathFile}, _From, State) ->
+    Reply=lib_provider:wanted_state_from_file(FullPathFile),
+    {reply, Reply, State};
+
+handle_call({create_provider,ProviderSpec,HostSpec}, _From, State) ->
+    Reply=lib_provider:create(ProviderSpec,HostSpec),
+    {reply, Reply, State};
+handle_call({delete_provider,ProviderSpec,HostSpec}, _From, State) ->
+    Reply=lib_provider:delete(ProviderSpec,HostSpec),
+    {reply, Reply, State};
 
 
 %%--------------------------------------------------------------------

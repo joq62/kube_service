@@ -22,6 +22,10 @@
 
 %% External exports
 -export([
+	 wanted_state_from_file/1,
+	 create_deployment_from_file/1,
+	 delete_deployment_from_file/1,
+
 	 load/2,
 	 start/2,
 	 unload/2,
@@ -36,7 +40,94 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
-   
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+
+wanted_state_from_file(FullPathFile)->
+    Result=case file:consult(FullPathFile) of
+	       {error,Reason}->
+		   {error,["couldnt read file ",FullPathFile,Reason,?MODULE,?LINE]};
+	       {ok,List}->
+		   {ok,List}
+	   end,    
+    Result.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+create_deployment_from_file(FullPathFile)->
+ %   io:format("Dbg ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,FullPathFile}]),
+    Result=case file:consult(FullPathFile) of
+	       {error,Reason}->
+		   {error,["couldnt read file ",FullPathFile,Reason,?MODULE,?LINE]};
+	       {ok,List}->
+		   io:format("Dbg ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,List}]),
+		   deploy(List,[])
+	   end,    
+    Result.
+
+deploy([],Acc)->
+    Acc;
+deploy([{ProviderSpec,HostSpec}|T],Acc)->
+   % io:format("deploy ~p~n",[{ProviderSpec,HostSpec,?MODULE,?FUNCTION_NAME,?LINE}]),
+    NewAcc=case is_loaded(ProviderSpec,HostSpec) of
+	       false->
+		   case load(ProviderSpec,HostSpec) of
+		       {ok,ProviderSpec,HostSpec,ProviderNode,App}->
+			   case start(ProviderSpec,HostSpec) of
+			       ok->
+				   [{ok,ProviderSpec,HostSpec,ProviderNode,App,?MODULE,?LINE}|Acc];
+			       {error,Reason}->
+				   [{error,Reason,ProviderSpec,HostSpec,?MODULE,?LINE}|Acc]
+			   end;
+		       {error,Reason}->
+			   [{error,Reason,ProviderSpec,HostSpec,?MODULE,?LINE}|Acc]
+		   end;
+	       true->
+		   [{error,already_loaded,ProviderSpec,HostSpec,?MODULE,?LINE}|Acc]
+	   end,
+    deploy(T,NewAcc).
+ 
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+delete_deployment_from_file(FullPathFile)->
+  %  io:format("Dbg ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,FullPathFile}]),
+    Result=case file:consult(FullPathFile) of
+	       {error,Reason}->
+		   {error,["couldnt read file ",FullPathFile,Reason,?MODULE,?LINE]};
+	       {ok,List}->
+		   delete(List,[])
+	   end,    
+    Result.
+delete([],Acc)->
+    Acc;
+delete([{ProviderSpec,HostSpec}|T],Acc)->
+   % io:format("delete ~p~n",[{ProviderSpec,HostSpec,?MODULE,?FUNCTION_NAME,?LINE}]),
+    NewAcc=case is_loaded(ProviderSpec,HostSpec) of
+	       true->
+		   case stop(ProviderSpec,HostSpec) of
+		       ok->
+			   case unload(ProviderSpec,HostSpec) of
+			       ok->
+				   [{ok,ProviderSpec,HostSpec,?MODULE,?LINE}|Acc];
+			       {error,Reason}->
+				   [{error,Reason,ProviderSpec,HostSpec,?MODULE,?LINE}|Acc]
+			   end;
+		       {error,Reason}->
+			   [{error,Reason,ProviderSpec,HostSpec,?MODULE,?LINE}|Acc]
+		   end;
+	       false->
+		   [{error,not_loaded,ProviderSpec,HostSpec,?MODULE,?LINE}|Acc]
+	   end,
+    delete(T,NewAcc).
 
 %%--------------------------------------------------------------------
 %% @doc
