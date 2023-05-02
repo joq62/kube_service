@@ -208,7 +208,12 @@ unload(ProviderSpec,HostSpec)->
 				       {error,Reason}->
 					   {error,["Failed to stop ProviderNode",ProviderNode, Reason,?MODULE,?FUNCTION_NAME,?LINE]};
 				       ok->
-					   ok
+					   case vm:check_stopped_node(ProviderNode) of
+					       true->
+						   ok;
+					       false ->
+						   {error,["Failed to stop ProviderNode",ProviderNode,?MODULE,?FUNCTION_NAME,?LINE]}
+					   end
 				   end
 			   end
 		   end
@@ -305,13 +310,13 @@ is_started(ProviderSpec,HostSpec)->
 		   ProviderNode=list_to_atom(ProviderNodeName++"@"++HostName),
 		   case is_node_started(ProviderSpec,HostSpec) of
 		       false->
-			   {error,["provider node not started",ProviderNode,?MODULE,?FUNCTION_NAME,?LINE]},
+			   %{error,["provider node not started",ProviderNode,?MODULE,?FUNCTION_NAME,?LINE]},
 			   false;
 		       true->
 		%	   io:format("  ~p~n",[{ProviderNode,App ,?MODULE,?FUNCTION_NAME,?LINE}]),
 		%	   io:format("ProviderNode,App   ~p~n",[{ProviderNode,App ,?MODULE,?FUNCTION_NAME,?LINE}]),
 			   case rpc:call(ProviderNode,App,ping,[],5000) of
-			       {badrpc,Reason}->
+			       {badrpc,_Reason}->
 				  % {error,[badrpc,Reason,ProviderNode,App,?MODULE,?FUNCTION_NAME,?LINE]};
 				   false;
 			       pong->
