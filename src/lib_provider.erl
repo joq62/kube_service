@@ -66,7 +66,6 @@ create_deployment_from_file(FullPathFile)->
 	       {error,Reason}->
 		   {error,["couldnt read file ",FullPathFile,Reason,?MODULE,?LINE]};
 	       {ok,List}->
-		   io:format("Dbg ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE,List}]),
 		   deploy(List,[])
 	   end,    
     Result.
