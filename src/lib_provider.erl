@@ -51,9 +51,25 @@ wanted_state_from_file(FullPathFile)->
 	       {error,Reason}->
 		   {error,["couldnt read file ",FullPathFile,Reason,?MODULE,?LINE]};
 	       {ok,List}->
-		   {ok,List}
+		   {ok,add_state_info(List,[])}
 	   end,    
     Result.
+add_state_info([],Acc)->
+    Acc;
+add_state_info([{ProviderSpec,HostSpec}|T],Acc)->
+    NewAcc=case sd:call(?DBETCD,db_provider_spec,member,[ProviderSpec],5000) of
+	       false->
+		   [{error,[eexists,ProviderSpec,?MODULE,?LINE]}|Acc];
+	       true ->
+		   case sd:call(?DBETCD,db_provider_spec,read,[app,ProviderSpec],5000) of
+		       {error,Reason}->
+			   [{error,["error reading provider spec",ProviderSpec,?MODULE,?LINE]}|Acc];
+		       {ok,App}->
+			   [{ProviderSpec,HostSpec,App}|Acc]
+		   end
+	   end,
+    add_state_info(T,NewAcc).
+		   
 
 %%--------------------------------------------------------------------
 %% @doc
