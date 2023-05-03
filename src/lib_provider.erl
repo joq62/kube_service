@@ -348,13 +348,13 @@ start(ProviderSpec,HostSpec)->
 		   ProviderNode=list_to_atom(ProviderNodeName++"@"++HostName),
 		   case is_loaded(ProviderSpec,HostSpec) of
 		       false->
-			   {error,["Not loaded  ",App,?MODULE,?FUNCTION_NAME,?LINE]};
+			   {error,["Not loaded  ",App,ProviderSpec,HostSpec,?MODULE,?FUNCTION_NAME,?LINE]};
 		       true->	  
 			   case rpc:call(ProviderNode,application,start,[App],30*1000)of
 			       {badrpc,Reason}->
-				   {error,[badrpc,Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+				   {error,[badrpc,Reason,ProviderSpec,HostSpec,?MODULE,?FUNCTION_NAME,?LINE]};
 			       {error,Reason}->
-				   {error,[Reason,?MODULE,?FUNCTION_NAME,?LINE]};
+				   {error,[Reason,ProviderSpec,HostSpec,?MODULE,?FUNCTION_NAME,?LINE]};
 			       ok->
 				   ok
 			   end
