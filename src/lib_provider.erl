@@ -50,7 +50,7 @@ wanted_state_from_file(FullPathFile)->
     Result=case file:consult(FullPathFile) of
 	       {error,Reason}->
 		   {error,["couldnt read file ",FullPathFile,Reason,?MODULE,?LINE]};
-	       {ok,List}->
+	       {ok,[{deployment_spec,_SpecId,List}]}->
 		   {ok,add_state_info(List,[])}
 	   end,    
     Result.
@@ -63,7 +63,7 @@ add_state_info([{ProviderSpec,HostSpec}|T],Acc)->
 	       true ->
 		   case sd:call(?DBETCD,db_provider_spec,read,[app,ProviderSpec],5000) of
 		       {error,Reason}->
-			   [{error,["error reading provider spec",ProviderSpec,?MODULE,?LINE]}|Acc];
+			   [{error,["error reading provider spec",ProviderSpec,Reason,?MODULE,?LINE]}|Acc];
 		       {ok,App}->
 			   [{ProviderSpec,HostSpec,App}|Acc]
 		   end
@@ -81,7 +81,7 @@ create_deployment_from_file(FullPathFile)->
     Result=case file:consult(FullPathFile) of
 	       {error,Reason}->
 		   {error,["couldnt read file ",FullPathFile,Reason,?MODULE,?LINE]};
-	       {ok,List}->
+	       {ok,[{deployment_spec,_SpecId,List}]}->
 		   deploy(List,[])
 	   end,    
     Result.
@@ -118,7 +118,7 @@ delete_deployment_from_file(FullPathFile)->
     Result=case file:consult(FullPathFile) of
 	       {error,Reason}->
 		   {error,["couldnt read file ",FullPathFile,Reason,?MODULE,?LINE]};
-	       {ok,List}->
+	       {ok,[{deployment_spec,_SpecId,List}]}->
 		   delete(List,[])
 	   end,    
     Result.

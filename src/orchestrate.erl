@@ -10,13 +10,13 @@
 
 -include("log.api").
 
--define(SleepInterval,60*1000).
--define(LockTimeout, 3*60*1000).
+-define(SleepInterval,30*1000).
+-define(LockTimeout, 2*?SleepInterval).
 
 %% API
 -export([
-	 start/1,
-	 start/2
+	 start/2,
+	 start/3
 	]).
 
 %%%===================================================================
@@ -28,10 +28,10 @@
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
-start(LockId)->
-    start(LockId,?SleepInterval).
+start(LockId,WantedState)->
+    start(LockId,WantedState,?SleepInterval).
 
-start(LockId,SleepInterval)->
+start(LockId,WantedState,SleepInterval)->
     Result=case sd:call(dbetcd,db_lock,try_lock,[LockId,?LockTimeout],5000) of
 	       {error,Reason}->
 		   {error,["Failed calling dbetcd,db_lock,try_lock: ",Reason,LockId,?LockTimeout,?MODULE,?FUNCTION_NAME,?LINE]};
@@ -41,11 +41,11 @@ start(LockId,SleepInterval)->
 		   timer:sleep(SleepInterval),
 		   locked;
 	       {ok,TransactionId} ->
-		   ResultHostController=check_and_start_host_controllers(),
-		   ResultProvider=check_and_start_providers(),
+		   {ok,StartControllers}=controllers(WantedState),
+		   {ok,StartProviders}=providers(WantedState),
 		   timer:sleep(SleepInterval),
 		   sd:call(dbetcd,db_lock,unlock,[LockId,TransactionId],5000),
-		   {ok,ResultHostController,[not_implmented]}
+		   {ok,StartControllers,StartProviders}
 	   end,
     rpc:cast(node(),kube,orchestrate_result,[Result]).
     
@@ -64,94 +64,64 @@ start(LockId,SleepInterval)->
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
-check_and_start_providers()->
-    Result=case sd:call(dbetcd,db_provider_spec,get_all_id,[],5000) of
-	       {error,Reason}->
-		   {error,["Failed calling dbetcd,db_host_spec,read,get_all_id: ",Reason,?MODULE,?FUNCTION_NAME,?LINE]};
-	       {badrpc,Reason}->
-		   {error,["badrpc Failed calling dbetcd,db_host_spec,read,get_all_id: ",Reason,?MODULE,?FUNCTION_NAME,?LINE]};
-	       AllProviderSpecs->
-		 %  io:format("AllProviderSpecs ~p~n",[{AllProviderSpecs,?MODULE,?FUNCTION_NAME,?LINE}]),
-		   case sd:call(dbetcd,db_host_spec,get_all_id,[],5000) of
-		       {error,Reason}->
-			   {error,["Failed calling dbetcd,db_host_spec,read,get_all_id: ",Reason,?MODULE,?FUNCTION_NAME,?LINE]};
-		       {badrpc,Reason}->
-			   {error,["badrpc Failed calling dbetcd,db_host_spec,read,get_all_id: ",Reason,?MODULE,?FUNCTION_NAME,?LINE]};
-		       AllHostSpecs->
-		%	   io:format("AllHostSpecs ~p~n",[{AllHostSpecs,?MODULE,?FUNCTION_NAME,?LINE}]),
-			   ProviderAndHostSpecList=[{ProviderSpec,HostSpec}||ProviderSpec<-AllProviderSpecs,
-									     HostSpec<-AllHostSpecs],
-			   io:format("ProviderAndHostSpecList ~p~n",[{ProviderAndHostSpecList,?MODULE,?FUNCTION_NAME,?LINE}]),
-
-			   MissingProviders=[{ProviderSpec,HostSpec}||{ProviderSpec,HostSpec}<-ProviderAndHostSpecList,
-						       false== kube:is_started_provider(ProviderSpec,HostSpec)],
-			   R=map_start_provider(MissingProviders),
-			   R
-		   end
-	   end,
-    ?LOG_NOTICE("start_provider result ",[Result]),
-    Result.
-
-map_start_provider(MissingProviders)->
-    io:format(" map_start_provider MissingProviders ~p~n",[MissingProviders]),
-    F1 = fun start_provider/2,
-    F2 = fun provider_result/3,
-    R=mapreduce:start(F1,F2,[],MissingProviders),
-    io:format(" map_start_provider R ~p~n",[R]),
-    R.
-
-
-
-start_provider(Pid,{ProviderSpec,HostSpec})->
-    io:format("Pid,ProviderSpec,HostSpec ~p~n",[{Pid,ProviderSpec,HostSpec,?MODULE,?FUNCTION_NAME,?LINE}]),
- %   Result=case kube:load_provider(ProviderSpec,HostSpec) of
-    Result=case lib_provider:load(ProviderSpec,HostSpec) of
-	       {error,Reason}->
-		   {error,Reason};
-	       {ok,_ProviderNode,_App}->
-	%	   kube:start_provider(ProviderSpec,HostSpec)
-		   lib_provider:start(ProviderSpec,HostSpec)
-	   end,
-    Pid!{start_provider,Result}.
-
-provider_result(start_provider,Vals,Acc)->
-    [Vals|Acc].    
-
+controllers(WantedState)->
+    WantedHostSpecs=list_rm_duplicates(WantedState),
+    MissingControlles=[HostSpec||HostSpec<-WantedHostSpecs,
+				 false==kube:is_controller_started(HostSpec)],
+    StartControllers=[{kube:start_controller(HostSpec),HostSpec}||HostSpec<-MissingControlles],    
+    {ok,StartControllers}.
 
 %%--------------------------------------------------------------------
 %% @doc
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
-check_and_start_host_controllers()->
-    Result=case sd:call(dbetcd,db_host_spec,get_all_id,[],5000) of
-	       {error,Reason}->
-		   {error,["Failed calling dbetcd,db_host_spec,read,get_all_id: ",Reason,?MODULE,?FUNCTION_NAME,?LINE]};
-	       {badrpc,Reason}->
-		   {error,["badrpc Failed calling dbetcd,db_host_spec,read,get_all_id: ",Reason,?MODULE,?FUNCTION_NAME,?LINE]};
-	       AllHostSpecs->
-		   MissingHostControllers=[HostSpec||HostSpec<-AllHostSpecs,
-						     false==lib_host:is_started_host_controller(HostSpec)],
-		   R=map_start_host_controller(MissingHostControllers),
-		   ?LOG_NOTICE("start_host_controller result ",[R]),
-		   R
-		   
+list_rm_duplicates(L)->
+    list_rm_duplicates(L,[]).
+list_rm_duplicates([],Acc)->
+    Acc;
+list_rm_duplicates([{_,HostSpec,_}|T],Acc)->
+    NewAcc=case lists:member(HostSpec,Acc) of
+	       true->
+		   Acc;
+	       false ->
+		   [HostSpec|Acc]
 	   end,
-    Result.
-
-map_start_host_controller(HostSpecList)->
-    F1 = fun start_host/2,
-    F2 = fun host_result/3,
-    [R]=mapreduce:start(F1,F2,[],HostSpecList),
-    io:format(" R ~p~n",[R]),
-    R.
-
-
-
-start_host(Pid,HostSpec)->
-    Pid!{start_host_controller,lib_host:start_host_controller(HostSpec)}.
-
-host_result(start_host_controller,Vals,Acc)->
-    [Vals|Acc].
+    list_rm_duplicates(T,NewAcc).
     
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+providers(WantedState)->
+    StartMissingProviders=providers(WantedState,[]),
+    {ok,StartMissingProviders}.
+
+providers([],Acc)->
+    Acc;
+providers([{ProviderSpec,HostSpec,_App}|T],Acc)->
+    Loaded=kube:is_provider_loaded(ProviderSpec,HostSpec),
+    Started=kube:is_provider_started(ProviderSpec,HostSpec),
+    NewAcc=case {Loaded,Started} of
+	       {false,_}->
+		   case kube:load_provider(ProviderSpec,HostSpec) of
+		       {ok,ProviderSpec,HostSpec,_ProviderNode,_ProviderApp}->
+			   [{kube:start_provider(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
+		       {error,Reason}->
+			   [{error,[ProviderSpec,HostSpec,Reason,?MODULE,?LINE]}|Acc]
+		   end;
+	       {true,false}->
+		   [{kube:start_provider(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
+	       {true,true}->
+		   Acc
+	   end,
+    providers(T,NewAcc).
+    
+    
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
 
