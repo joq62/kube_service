@@ -106,7 +106,7 @@ providers(WantedState)->
 
 providers([],Acc)->
     Acc;
-providers([{ProviderSpec,HostSpec,_App}|T],Acc)->
+providers([{ProviderSpec,HostSpec}|T],Acc)->
     Loaded=kube:is_provider_loaded(ProviderSpec,HostSpec),
     Started=kube:is_provider_started(ProviderSpec,HostSpec),
     NewAcc=case {Loaded,Started} of
