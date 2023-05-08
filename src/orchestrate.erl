@@ -74,8 +74,8 @@ start(WantedState)->
 controllers(WantedState)->
     WantedHostSpecs=list_rm_duplicates(WantedState),
     MissingControlles=[HostSpec||HostSpec<-WantedHostSpecs,
-				 false==kube:is_controller_started(HostSpec)],
-    StartControllers=[{kube:start_controller(HostSpec),HostSpec}||HostSpec<-MissingControlles],    
+				 false==lib_host:is_controller_started(HostSpec)],
+    StartControllers=[{lib_host:start_controller(HostSpec),HostSpec}||HostSpec<-MissingControlles],    
     {ok,StartControllers}.
 
 %%--------------------------------------------------------------------
@@ -108,18 +108,18 @@ providers(WantedState)->
 providers([],Acc)->
     Acc;
 providers([{ProviderSpec,HostSpec}|T],Acc)->
-    Loaded=kube:is_provider_loaded(ProviderSpec,HostSpec),
-    Started=kube:is_provider_started(ProviderSpec,HostSpec),
+    Loaded=lib_provider:is_loaded(ProviderSpec,HostSpec),
+    Started=lib_provider:is_started(ProviderSpec,HostSpec),
     NewAcc=case {Loaded,Started} of
 	       {false,_}->
-		   case kube:load_provider(ProviderSpec,HostSpec) of
+		   case lib_provider:load(ProviderSpec,HostSpec) of
 		       {ok,ProviderSpec,HostSpec,_ProviderNode,_ProviderApp}->
-			   [{kube:start_provider(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
+			   [{lib_provider:start(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
 		       {error,Reason}->
 			   [{error,[ProviderSpec,HostSpec,Reason,?MODULE,?LINE]}|Acc]
 		   end;
 	       {true,false}->
-		   [{kube:start_provider(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
+		   [{lib_provider:start(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
 	       {true,true}->
 		   Acc
 	   end,
