@@ -19,7 +19,8 @@
 
 %% API
 -export([
-	 start_orchestrate/0
+	 start_orchestrate/1,
+	 orchestrate_result/1
 	 ]).
 
 -export([
@@ -63,7 +64,8 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {orchestrate_started}).
+-record(state, {orchestrate_started,
+		wanted_state}).
 
 %%%===================================================================
 %%% API
@@ -74,8 +76,11 @@
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
-start_orchestrate()->
-    gen_server:cast(?SERVER, {start_orchestrate}).
+start_orchestrate(WantedState)->
+    gen_server:cast(?SERVER,{start_orchestrate,WantedState}).
+orchestrate_result(StartResult)->
+    gen_server:cast(?SERVER,{orchestrate_result,StartResult}).
+
 %%--------------------------------------------------------------------
 %% @doc
 %% @spec
@@ -288,15 +293,22 @@ handle_call(UnMatchedSignal, From, State) ->
 %% Handling cast messages
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({start_orchestrate},#state{orchestrate_started=false}=State) ->
-    io:format("start_orchestrate  ~p~n",[{false,?MODULE,?LINE}]),
-    NewState=State#state{orchestrate_started=true},
+handle_cast({start_orchestrate,WantedState},#state{orchestrate_started=false}=State) ->
+    spawn(fun()->orchestrate:start(State#state.wanted_state) end),
+    NewState=State#state{orchestrate_started=true,
+			 wanted_state=WantedState},
     
     {noreply, NewState};
 
-handle_cast({start_orchestrate},#state{orchestrate_started=true}=State) ->
-    io:format("start_orchestrate  ~p~n",[{true,?MODULE,?LINE}]),
+handle_cast({start_orchestrate,_WantedState},#state{orchestrate_started=true}=State) ->
+    io:format("start_orchestrate true ~p~n",[{no_action,?MODULE,?LINE}]),
     {noreply, State};
+
+handle_cast({orchestrate_result,StartResult},State) ->
+    io:format("orchestrate_result ~p~n",[{StartResult,?MODULE,?LINE}]),
+    spawn(fun()->orchestrate:start(State#state.wanted_state) end),
+    {noreply, State};
+
 
 handle_cast(UnMatchedSignal, State) ->
     io:format("unmatched_signal ~p~n",[{UnMatchedSignal,?MODULE,?LINE}]),

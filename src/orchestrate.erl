@@ -15,6 +15,7 @@
 
 %% API
 -export([
+	 start/1,
 	 start/2,
 	 start/3
 	]).
@@ -54,7 +55,12 @@ start(LockId,WantedState,SleepInterval)->
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
+start(WantedState)->
+    {ok,StartControllers}=controllers(WantedState),
+    {ok,StartProviders}=providers(WantedState),
+    rpc:cast(node(),kube,orchestrate_result,[{ok,StartControllers,StartProviders}]).
 
+    
 
 %%%===================================================================
 %%% Internal functions
