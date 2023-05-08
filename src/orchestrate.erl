@@ -116,7 +116,7 @@ providers([{ProviderSpec,HostSpec}|T],Acc)->
 		   Started=lib_provider:is_started(ProviderSpec,HostSpec),
 		   case {Loaded,Started} of
 		       {false,_}->
-			   case lib_provider:load_provider(ProviderSpec,HostSpec) of
+			   case lib_provider:load(ProviderSpec,HostSpec) of
 			       {ok,ProviderSpec,HostSpec,_ProviderNode,_ProviderApp}->
 				   [{lib_provider:start(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
 			       {error,Reason}->
