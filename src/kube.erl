@@ -194,7 +194,7 @@ init([]) ->
     %% start orchestrate automatic
     
     [{"production",WantedState}]=sd:call(dbetcd_appl,db_deployment_spec,read_all,[],5000),
-    spawn(fun()->orchestrate:start(WantedState) end),
+    spawn(fun()->orchestrate:start(?LockId,WantedState) end),
       
     ?LOG_NOTICE("Server started test pattern ",[WantedState]),
        
@@ -310,7 +310,7 @@ handle_call(UnMatchedSignal, From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({start_orchestrate,WantedState},#state{orchestrate_started=false}=State) ->
-    spawn(fun()->orchestrate:start(WantedState) end),
+    spawn(fun()->orchestrate:start(?LockId,WantedState) end),
     NewState=State#state{orchestrate_started=true,
 			 wanted_state=WantedState},
     
@@ -322,7 +322,7 @@ handle_cast({start_orchestrate,_WantedState},#state{orchestrate_started=true}=St
 
 handle_cast({orchestrate_result,StartResult},State) ->
     io:format("orchestrate_result ~p~n",[{StartResult,?MODULE,?LINE}]),
-    spawn(fun()->orchestrate:start(State#state.wanted_state) end),
+    spawn(fun()->orchestrate:start(?LockId,State#state.wanted_state) end),
     {noreply, State};
 
 
