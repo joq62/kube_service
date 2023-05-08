@@ -108,20 +108,25 @@ providers(WantedState)->
 providers([],Acc)->
     Acc;
 providers([{ProviderSpec,HostSpec}|T],Acc)->
-    Loaded=lib_provider:is_loaded(ProviderSpec,HostSpec),
-    Started=lib_provider:is_started(ProviderSpec,HostSpec),
-    NewAcc=case {Loaded,Started} of
-	       {false,_}->
-		   case lib_provider:load(ProviderSpec,HostSpec) of
-		       {ok,ProviderSpec,HostSpec,_ProviderNode,_ProviderApp}->
+    NewAcc=case lib_host:is_started(HostSpec) of
+	       false->
+		   [{error,["host controller not started ",HostSpec,?MODULE,?LINE]}|Acc];
+	       true->
+		   Loaded=lib_provider:is_loaded(ProviderSpec,HostSpec),
+		   Started=lib_provider:is_started(ProviderSpec,HostSpec),
+		   case {Loaded,Started} of
+		       {false,_}->
+			   case lib_provider:load_provider(ProviderSpec,HostSpec) of
+			       {ok,ProviderSpec,HostSpec,_ProviderNode,_ProviderApp}->
+				   [{lib_provider:start(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
+			       {error,Reason}->
+				   [{error,[ProviderSpec,HostSpec,Reason,?MODULE,?LINE]}|Acc]
+			   end;
+		       {true,false}->
 			   [{lib_provider:start(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
-		       {error,Reason}->
-			   [{error,[ProviderSpec,HostSpec,Reason,?MODULE,?LINE]}|Acc]
-		   end;
-	       {true,false}->
-		   [{lib_provider:start(ProviderSpec,HostSpec),ProviderSpec,HostSpec}|Acc];
-	       {true,true}->
-		   Acc
+		       {true,true}->
+			   Acc
+		   end
 	   end,
     providers(T,NewAcc).
     
