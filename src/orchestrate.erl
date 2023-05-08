@@ -108,7 +108,7 @@ providers(WantedState)->
 providers([],Acc)->
     Acc;
 providers([{ProviderSpec,HostSpec}|T],Acc)->
-    NewAcc=case lib_host:is_started(HostSpec) of
+    NewAcc=case lib_host:is_controller_started(HostSpec) of
 	       false->
 		   [{error,["host controller not started ",HostSpec,?MODULE,?LINE]}|Acc];
 	       true->
