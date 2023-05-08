@@ -191,6 +191,7 @@ init([]) ->
 	    {atomic,ok}=sd:call(dbetcd_appl,db_lock,create,[?LockId,0],5000)
     end,
     
+    
     ?LOG_NOTICE("Server started ",[]),
        
     {ok, #state{orchestrate_started=false}}.
