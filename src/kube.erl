@@ -177,7 +177,9 @@ stop()-> gen_server:call(?SERVER, {stop},infinity).
 init([]) ->
     ?LOG_NOTICE("Server started ",[]),
     
-   {ok, #state{orchestrate_started=false}}.
+     
+    
+    {ok, #state{orchestrate_started=false}}.
 %%--------------------------------------------------------------------
 %% @doc2
 %% @spec
@@ -288,7 +290,9 @@ handle_call(UnMatchedSignal, From, State) ->
 %%--------------------------------------------------------------------
 handle_cast({start_orchestrate},#state{orchestrate_started=false}=State) ->
     io:format("start_orchestrate  ~p~n",[{false,?MODULE,?LINE}]),
-    {noreply, State};
+    NewState=State#state{orchestrate_started=true},
+    
+    {noreply, NewState};
 
 handle_cast({start_orchestrate},#state{orchestrate_started=true}=State) ->
     io:format("start_orchestrate  ~p~n",[{true,?MODULE,?LINE}]),
