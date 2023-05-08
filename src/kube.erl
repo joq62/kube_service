@@ -294,7 +294,7 @@ handle_call(UnMatchedSignal, From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({start_orchestrate,WantedState},#state{orchestrate_started=false}=State) ->
-    spawn(fun()->orchestrate:start(State#state.wanted_state) end),
+    spawn(fun()->orchestrate:start(WantedState) end),
     NewState=State#state{orchestrate_started=true,
 			 wanted_state=WantedState},
     
