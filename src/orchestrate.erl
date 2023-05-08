@@ -86,7 +86,7 @@ list_rm_duplicates(L)->
     list_rm_duplicates(L,[]).
 list_rm_duplicates([],Acc)->
     Acc;
-list_rm_duplicates([{_,HostSpec,_}|T],Acc)->
+list_rm_duplicates([{_,HostSpec}|T],Acc)->
     NewAcc=case lists:member(HostSpec,Acc) of
 	       true->
 		   Acc;
