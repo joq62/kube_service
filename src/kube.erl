@@ -194,7 +194,7 @@ init([]) ->
     %% start orchestrate automatic
     
     [{"production",WantedState}]=sd:call(dbetcd_appl,db_deployment_spec,read_all,[],5000),
-%    spawn(fun()->orchestrate:start(WantedState) end),
+    spawn(fun()->orchestrate:start(WantedState) end),
       
     ?LOG_NOTICE("Server started test pattern ",[WantedState]),
        
