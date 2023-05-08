@@ -196,7 +196,7 @@ init([]) ->
     [{"production",WantedState}]=sd:call(dbetcd_appl,db_deployment_spec,read_all,[],5000),
     spawn(fun()->orchestrate:start(WantedState) end),
       
-    ?LOG_NOTICE("Server started ",[WantedState]),
+    ?LOG_NOTICE("Server started test pattern ",[WantedState]),
        
     {ok, #state{orchestrate_started=true,
 		wanted_state=WantedState}}.
