@@ -58,6 +58,7 @@ start(LockId,WantedState,SleepInterval)->
 start(WantedState)->
     {ok,StartControllers}=controllers(WantedState),
     {ok,StartProviders}=providers(WantedState),
+    timer:sleep(?SleepInterval),
     rpc:cast(node(),kube,orchestrate_result,[{ok,StartControllers,StartProviders}]).
 
     
