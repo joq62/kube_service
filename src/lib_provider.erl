@@ -198,7 +198,7 @@ load(ProviderSpec,HostSpec)->
 					       false->
 						   {error,["Failed to stop host controller node ",ProviderNode,?MODULE,?FUNCTION_NAME,?LINE]};
 					       true->
-						 %  io:format("HostNode,HostName,ProviderNodeName,Args ~p~n",[{rpc:call(HostNode,erlang,get_cookie,[],5000),HostNode,HostName,ProviderNodeName,Args,?MODULE,?FUNCTION_NAME,?LINE}]),	   
+						   io:format("HostNode,HostName,ProviderNodeName,Args ~p~n",[{rpc:call(HostNode,erlang,get_cookie,[],5000),HostNode,HostName,ProviderNodeName,Args,?MODULE,?FUNCTION_NAME,?LINE}]),	   
 						   case rpc:call(HostNode,slave,start,[HostName,ProviderNodeName,Args],10*1000) of
 						       {badrpc,Reason}->
 							   {error,[badrpc,Reason,ProviderSpec,HostSpec,?MODULE,?FUNCTION_NAME,?LINE]};
