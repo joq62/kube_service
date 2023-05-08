@@ -190,10 +190,16 @@ init([]) ->
 	false ->
 	    {atomic,ok}=sd:call(dbetcd_appl,db_lock,create,[?LockId,0],5000)
     end,
+     
+    %% start orchestrate automatic
     
+    [{"production",WantedState}]=db_deployment_spec:read_all(),
+    spawn(fun()->orchestrate:start(WantedState) end),
+      
     ?LOG_NOTICE("Server started ",[]),
        
-    {ok, #state{orchestrate_started=false}}.
+    {ok, #state{orchestrate_started=true,
+		wanted_state=WantedState}}.
 
 %%--------------------------------------------------------------------
 %% @doc2
