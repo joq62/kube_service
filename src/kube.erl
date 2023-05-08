@@ -19,6 +19,10 @@
 
 %% API
 -export([
+	 start_orchestrate/0
+	 ]).
+
+-export([
 %% Host controller
 	 start_controller/1,
 	 stop_controller/1,
@@ -59,11 +63,19 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {}).
+-record(state, {orchestrate_started}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+start_orchestrate()->
+    gen_server:cast(?SERVER, {start_orchestrate}).
 %%--------------------------------------------------------------------
 %% @doc
 %% @spec
@@ -165,9 +177,7 @@ stop()-> gen_server:call(?SERVER, {stop},infinity).
 init([]) ->
     ?LOG_NOTICE("Server started ",[]),
     
-     
-    
-    {ok, #state{}}.
+   {ok, #state{orchestrate_started=false}}.
 %%--------------------------------------------------------------------
 %% @doc2
 %% @spec
@@ -276,6 +286,14 @@ handle_call(UnMatchedSignal, From, State) ->
 %% Handling cast messages
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({start_orchestrate},#state{orchestrate_started=false}=State) ->
+    io:format("start_orchestrate  ~p~n",[{false,?MODULE,?LINE}]),
+    {noreply, State};
+
+handle_cast({start_orchestrate},#state{orchestrate_started=true}=State) ->
+    io:format("start_orchestrate  ~p~n",[{false,?MODULE,?LINE}]),
+    {noreply, State};
+
 handle_cast(UnMatchedSignal, State) ->
     io:format("unmatched_signal ~p~n",[{UnMatchedSignal,?MODULE,?LINE}]),
     {noreply, State}.
