@@ -291,7 +291,7 @@ handle_cast({start_orchestrate},#state{orchestrate_started=false}=State) ->
     {noreply, State};
 
 handle_cast({start_orchestrate},#state{orchestrate_started=true}=State) ->
-    io:format("start_orchestrate  ~p~n",[{false,?MODULE,?LINE}]),
+    io:format("start_orchestrate  ~p~n",[{true,?MODULE,?LINE}]),
     {noreply, State};
 
 handle_cast(UnMatchedSignal, State) ->
