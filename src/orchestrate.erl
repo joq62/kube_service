@@ -33,7 +33,7 @@ start(LockId,WantedState)->
     start(LockId,WantedState,?SleepInterval).
 
 start(LockId,WantedState,SleepInterval)->
-    Result=case sd:call(dbetcd,db_lock,try_lock,[LockId,?LockTimeout],5000) of
+    Result=case sd:call(dbetcd_appl,db_lock,try_lock,[LockId,?LockTimeout],5000) of
 	       {error,Reason}->
 		   {error,["Failed calling dbetcd,db_lock,try_lock: ",Reason,LockId,?LockTimeout,?MODULE,?FUNCTION_NAME,?LINE]};
 	       {badrpc,Reason}->
@@ -45,7 +45,7 @@ start(LockId,WantedState,SleepInterval)->
 		   {ok,StartControllers}=controllers(WantedState),
 		   {ok,StartProviders}=providers(WantedState),
 		   timer:sleep(SleepInterval),
-		   sd:call(dbetcd,db_lock,unlock,[LockId,TransactionId],5000),
+		   sd:call(dbetcd_appl,db_lock,unlock,[LockId,TransactionId],5000),
 		   {ok,StartControllers,StartProviders}
 	   end,
     rpc:cast(node(),kube,orchestrate_result,[Result]).
