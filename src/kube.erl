@@ -84,7 +84,7 @@ start_orchestrate(WantedState)->
 orchestrate_result(StartResult)->
     gen_server:cast(?SERVER,{orchestrate_result,StartResult}).
 is_wanted_state()->
-    gen_server:cast(?SERVER,{is_wanted_state}).
+    gen_server:call(?SERVER,{is_wanted_state},infinity).
 
 %%--------------------------------------------------------------------
 %% @doc
