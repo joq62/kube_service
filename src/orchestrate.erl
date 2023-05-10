@@ -33,7 +33,7 @@
 is_wanted_state()->
      [{"production",WantedState}]=db_deployment_spec:read_all(),
     DeployResult=[{ProviderSpec,HostSpec}||{ProviderSpec,HostSpec}<-WantedState,
-			      false==lib_provider:is_started(ProviderSpec,HostSpec)],
+					   true=/=lib_provider:is_started(ProviderSpec,HostSpec)],
     Result=case DeployResult of
 	       []->
 		   true;
