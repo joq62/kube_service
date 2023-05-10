@@ -20,7 +20,8 @@
 %% API
 -export([
 	 start_orchestrate/1,
-	 orchestrate_result/1
+	 orchestrate_result/1,
+	 is_wanted_state/0
 	 ]).
 
 -export([
@@ -82,6 +83,8 @@ start_orchestrate(WantedState)->
     gen_server:cast(?SERVER,{start_orchestrate,WantedState}).
 orchestrate_result(StartResult)->
     gen_server:cast(?SERVER,{orchestrate_result,StartResult}).
+is_wanted_state()->
+    gen_server:cast(?SERVER,{is_wanted_state}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -207,6 +210,7 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 
+
 handle_call({create_deployment_from_file,FullPathFile}, _From, State) ->
     Reply=lib_provider:create_deployment_from_file(FullPathFile),
     {reply, Reply, State};
@@ -287,7 +291,14 @@ handle_call({is_controller_started,HostSpec}, _From, State) ->
     Reply=lib_host:is_controller_started(HostSpec),
     {reply, Reply, State};
 
-
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+handle_call({is_wanted_state}, _From, State) ->
+    Reply=orchestrate:is_wanted_state(),
+    {reply, Reply, State};
 %%--------------------------------------------------------------------
 %% @doc
 %% @spec

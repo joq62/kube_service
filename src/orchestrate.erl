@@ -17,12 +17,30 @@
 -export([
 	 start/1,
 	 start/2,
-	 start/3
+	 start/3,
+
+	 is_wanted_state/0
 	]).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+is_wanted_state()->
+     [{"production",WantedState}]=db_deployment_spec:read_all(),
+    DeployResult=[{ProviderSpec,HostSpec}||{ProviderSpec,HostSpec}<-WantedState,
+			      false==lib_provider:is_started(ProviderSpec,HostSpec)],
+    Result=case DeployResult of
+	       []->
+		   true;
+	       NotDeployed ->
+		   {false,NotDeployed}
+	   end,
+    Result.
 
 %%--------------------------------------------------------------------
 %% @doc
