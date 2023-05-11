@@ -68,7 +68,8 @@
 
 -record(state, {orchestrate_started,
 		wanted_state,
-		lock_id=?LockId}).
+		lock_id=?LockId,
+		is_wanted_state}).
 
 %%%===================================================================
 %%% API
@@ -193,16 +194,27 @@ init([]) ->
 	false ->
 	    {atomic,ok}=sd:call(dbetcd_appl,db_lock,create,[?LockId,0],5000)
     end,
-     
+    
+    %% check initial state
+    IsWantedState=case orchestrate:is_wanted_state() of
+		      true->
+			  true;
+		      {false,NotDeployed}->
+			  false
+		  end,
+ 
     %% start orchestrate automatic
+    
     
     [{"production",WantedState}]=sd:call(dbetcd_appl,db_deployment_spec,read_all,[],5000),
     spawn(fun()->orchestrate:start(?LockId,WantedState) end),
       
+    
     ?LOG_NOTICE("Server started test pattern ",[WantedState]),
        
     {ok, #state{orchestrate_started=true,
-		wanted_state=WantedState}}.
+		wanted_state=WantedState,
+		is_wanted_state=IsWantedState}}.
 
 %%--------------------------------------------------------------------
 %% @doc2
@@ -332,9 +344,29 @@ handle_cast({start_orchestrate,_WantedState},#state{orchestrate_started=true}=St
     {noreply, State};
 
 handle_cast({orchestrate_result,StartResult},State) ->
+    NewIsWantedState=case orchestrate:is_wanted_state() of
+			 true->
+			     case State#state.is_wanted_state of 
+				 true->
+				     true;
+				 false->
+				     ?LOG_NOTICE("Wanted State ",[]),
+				     false
+			     end;
+			 {false,_NotDeployed}->
+			     case State#state.is_wanted_state of 
+				 true->
+				     ?LOG_NOTICE("Not Wanted State ",[]),
+				     false;
+				 false->
+				     false
+			     end
+		     end,
+    
     io:format("orchestrate_result ~p~n",[{StartResult,?MODULE,?LINE}]),
     spawn(fun()->orchestrate:start(?LockId,State#state.wanted_state) end),
-    {noreply, State};
+    {noreply, State#state{is_wanted_state=NewIsWantedState}};
+   
 
 
 handle_cast(UnMatchedSignal, State) ->

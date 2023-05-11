@@ -31,7 +31,7 @@
 %% @end
 %%--------------------------------------------------------------------
 is_wanted_state()->
-     [{"production",WantedState}]=db_deployment_spec:read_all(),
+     [{"production",WantedState}]=sd:call(dbetcd_appl,db_deployment_spec,read_all,[],5000),
     DeployResult=[{ProviderSpec,HostSpec}||{ProviderSpec,HostSpec}<-WantedState,
 					   true=/=lib_provider:is_started(ProviderSpec,HostSpec)],
     Result=case DeployResult of
@@ -57,11 +57,11 @@ start(LockId,WantedState,SleepInterval)->
 	       {badrpc,Reason}->
 		   {error,["badrpc Failed calling dbetcd,db_lock,try_lock: ",Reason,LockId,?LockTimeout,?MODULE,?FUNCTION_NAME,?LINE]};
 	       locked ->
-		   ?LOG_NOTICE("Locked  ",[]),
+		  % ?LOG_NOTICE("Locked  ",[]),
 		   timer:sleep(SleepInterval),
 		   locked;
 	       {ok,TransactionId} ->
-		   ?LOG_NOTICE("Un Locked  ",[]),
+		  % ?LOG_NOTICE("Un Locked  ",[]),
 		   {ok,StartControllers}=controllers(WantedState),
 		   {ok,StartProviders}=providers(WantedState),
 		   timer:sleep(SleepInterval),
