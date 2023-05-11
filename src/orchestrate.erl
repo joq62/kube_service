@@ -57,9 +57,11 @@ start(LockId,WantedState,SleepInterval)->
 	       {badrpc,Reason}->
 		   {error,["badrpc Failed calling dbetcd,db_lock,try_lock: ",Reason,LockId,?LockTimeout,?MODULE,?FUNCTION_NAME,?LINE]};
 	       locked ->
+		   ?LOG_NOTICE("Locked  ",[]),
 		   timer:sleep(SleepInterval),
 		   locked;
 	       {ok,TransactionId} ->
+		   ?LOG_NOTICE("Un Locked  ",[]),
 		   {ok,StartControllers}=controllers(WantedState),
 		   {ok,StartProviders}=providers(WantedState),
 		   timer:sleep(SleepInterval),
