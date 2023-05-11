@@ -403,11 +403,14 @@ is_started(ProviderSpec,HostSpec)->
     IsStarted=lib_host:is_controller_started(HostSpec),
     Result=case {ProviderExists,HostSpecExists,IsStarted} of
 	       {false,_,_}->
-		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]};
+		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]},
+		   false;
 	       {_,false,_}->
-		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]};
+		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]},
+		   false;
 	       {true,true,false}->
-		   {error,["host controller not started ",HostSpec]};
+		   {error,["host controller not started ",HostSpec]},
+		   false;
 	       {true,true,true}->
 		   {ok,ProviderNodeName}=sd:call(?DBETCD,db_provider_spec,read,[node_name,ProviderSpec],5000),
 		   {ok,HostName}=sd:call(?DBETCD,db_host_spec,read,[hostname,HostSpec],5000),
@@ -445,11 +448,14 @@ is_node_started(ProviderSpec,HostSpec)->
     IsStarted=lib_host:is_controller_started(HostSpec),
     Result=case {ProviderExists,HostSpecExists,IsStarted} of
 	       {false,_,_}->
-		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]};
+		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]},
+		   false;
 	       {_,false,_}->
-		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]};
+		   {error,["eexists ",{ProviderExists,ProviderSpec},{HostSpecExists,HostSpec}]},
+		   false;
 	       {true,true,false}->
-		   {error,["host controller not started ",HostSpec]};
+		   {error,["host controller not started ",HostSpec]},
+		   false;
 	       {true,true,true}->
 	%	   io:format("ProviderExists,HostSpecExists ~p~n",[{ProviderExists,HostSpecExists,?MODULE,?FUNCTION_NAME,?LINE}]),
 		   {ok,ProviderNodeName}=sd:call(?DBETCD,db_provider_spec,read,[node_name,ProviderSpec],5000),
