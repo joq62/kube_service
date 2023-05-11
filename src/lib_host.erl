@@ -159,7 +159,6 @@ ssh_create_node(HostSpec,NodeName,CookieStr,PaArgs,EnvArgs)->
 			%  {ok,Node}
 		   end;
 	       Reason->
-		   glurk=Reason,
 		   {error,["Failed to create vm ",Reason,Node,HostSpec]}
 	   end,   
     Result.
