@@ -423,7 +423,7 @@ is_started(ProviderSpec,HostSpec)->
 		       true->
 		%	   io:format("  ~p~n",[{ProviderNode,App ,?MODULE,?FUNCTION_NAME,?LINE}]),
 		%	   io:format("ProviderNode,App   ~p~n",[{ProviderNode,App ,?MODULE,?FUNCTION_NAME,?LINE}]),
-			   case rpc:call(ProviderNode,App,ping,[],5000) of
+			   case rpc:call(ProviderNode,App,ping,[],3*5000) of
 			       {badrpc,_Reason}->
 				  % {error,[badrpc,Reason,ProviderNode,App,?MODULE,?FUNCTION_NAME,?LINE]};
 				   false;
