@@ -1,6 +1,7 @@
 all:
 	rm -rf  *~ */*~ src/*.beam test/*.beam test_ebin erl_cra*;
 	rm -rf _build logs log log_dir  *.pod_dir;
+	rm -rf adder* dbetcd*
 	rm -rf _build test_ebin ebin;
 	rm -rf Mnesia.*;
 	rm -rf *.dir;
