@@ -75,6 +75,10 @@ eunit:
 	rm -rf log_service;
 	git clone https://github.com/joq62/log_service.git;
 	erlc -I include -I ../api_repo -o test_ebin log_service/src/*.erl;
+#	dbetcd_appl
+	rm -rf dbetcd_appl;	
+	git clone https://github.com/joq62/dbetcd_appl;
+	cp dbetcd_appl/ebin/* test_ebin;
 #	Applications
 	mkdir ebin;		
 	rebar3 compile;	
@@ -83,5 +87,5 @@ eunit:
 	erl -pa ebin -pa test_ebin\
 	    -config test/test_sys.config\
 	    -sname do_test\
-	    -run all start\
+	    -run $(m) start\
 	    -setcookie a_cookie

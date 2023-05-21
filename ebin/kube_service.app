@@ -7,6 +7,7 @@
               {env,[]},
               {modules,[common,host_server,kube,kube_app,kube_server,
                         kube_service_app,kube_service_sup,kube_sup,lib_host,
-                        lib_orchestrate,lib_provider,ops_ssh,orchestrate]},
+                        lib_orchestrate,lib_provider,lib_provider2,ops_ssh,
+                        orchestrate]},
               {licenses,["Apache-2.0"]},
               {links,[]}]}.

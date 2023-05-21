@@ -1,0 +1,8 @@
+nodename is unique and used as a deployment is.
+node_dir is the same as nodename
+systime=system_time 32 microsecond
+provider_id
+nodename=provider_id++"_"++sys_time++"_"++"Pod"
+deployment_id=node_name
+
+lib_provider2.erl
