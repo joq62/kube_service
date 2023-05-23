@@ -27,6 +27,7 @@ start()->
     ok=setup(),
  %   ok=test1(),
     ok=test2(),
+    ok=test3(),
 
     io:format("Test OK !!! ~p~n",[?MODULE]),
     timer:sleep(2000),
@@ -34,6 +35,16 @@ start()->
     ok.
 
 
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+test3()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
+    kuk=orchestrate2:start_infra_providers(),
+    
+    ok.
 %%--------------------------------------------------------------------
 %% @doc
 %% @spec

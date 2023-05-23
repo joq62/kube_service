@@ -12,9 +12,13 @@
 
 -define(SleepInterval,30*1000).
 -define(LockTimeout, 2*?SleepInterval).
+-define(InfraDeploymentSpec,"infra").
+-define(InfraApps,[dbetcd_appl,kube_appl]).
 
 %% API
 -export([
+	 start_infra_providers/0,
+
 	 update_deployment/1,
 	 start/1,
 	 start/2,
@@ -31,7 +35,48 @@
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
+start_infra_providers()->
+    InfraDeployIds=get_infra_deploy(),
+    {ok,InfraDeployIds}.
+
+get_infra_deploy()->
+    AllDeployId=sd:call(dbetcd_appl,db_deploy,get_all_id,[],5000),
+    DeployId_ProviderSpecResult=[{DeployId,sd:call(dbetcd_appl,db_deploy,read,[provider_spec,DeployId],5000)}||DeployId<-AllDeployId],
+    get_infra_deploy(DeployId_ProviderSpecResult).
+
+
+get_infra_deploy(L)->
+    get_infra_deploy(L,[]).
+get_infra_deploy([],Acc)->
+    Acc;
+	
+get_infra_deploy([{DeployId,{ok,ProviderSpec}}|T],Acc)->
+    {ok,App}=sd:call(dbetcd_appl,db_provider_spec,read,[app,ProviderSpec],5000),
+    NewAcc=case lists:member(App,?InfraApps) of
+	       false->
+		   Acc;
+	       true ->
+		   [DeployId|Acc]
+	   end,
+    get_infra_deploy(T,NewAcc).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+start_providers()->
+    
+    ok.
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+
+    
 update_deployment(Glurk)->
+
     ok.
 
 
