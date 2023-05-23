@@ -22,6 +22,7 @@
 
 %% External exports
 -export([
+	 is_deployed/1,
 	 create_deployment/3,
 	 create_deployment/4,
 	 load_start/1,
@@ -38,10 +39,26 @@
 	]).
 
 
-
+%io:format("DeploymentId ~p~n",[{DeploymentId,?MODULE,?FUNCTION_NAME,?LINE}]),
 %% ====================================================================
 %% External functions
 %% ====================================================================
+is_deployed(DeploymentId)->
+    {ok,Node}=sd:call(dbetcd_appl,db_deploy,read,[node,DeploymentId],5000),
+    {ok,ProviderSpec}=sd:call(dbetcd_appl,db_deploy,read,[provider_spec,DeploymentId],5000),
+    {ok,App}=sd:call(dbetcd_appl,db_provider_spec,read,[app,ProviderSpec],5000),
+    Result=case net_adm:ping(Node) of
+	       pang->
+		   false;
+	       pong->
+		   case rpc:call(Node,App,ping,[],5000) of
+		       pong->
+			   true;
+		       _ ->
+			   false
+		   end
+	   end,
+    Result.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -78,6 +95,17 @@ delete_deployment(DeploymentId)->
 %% @end
 %%--------------------------------------------------------------------
 load_start(DeploymentId)->
+    {ok,MyHostName}=inet:gethostname(),
+    {ok,HostSpec}=sd:call(dbetcd_appl,db_deploy,read,[host_spec,DeploymentId],5000),
+    {ok,HostName}=sd:call(dbetcd_appl,db_host_spec,read,[hostname,HostSpec],5000),
+    case MyHostName==HostName of
+	true->
+	    local_load_start(DeploymentId);
+	false ->
+	    ssh_load_start(DeploymentId)
+    end.
+
+local_load_start(DeploymentId)->
     CookieStr=atom_to_list(erlang:get_cookie()),
     {ok,Dir}=sd:call(dbetcd_appl,db_deploy,read,[dir,DeploymentId],5000),
     %% TBD PaArgs needs to adjusted in db_provider_Spec 
@@ -85,6 +113,49 @@ load_start(DeploymentId)->
     EnvArgs=" ",
     ErlArgs=PaArgs++" "++"-setcookie "++CookieStr++" "++EnvArgs,
    
+    % Need to create everything befor start the vm becaudse of config
+    %% Create Dir
+    ok=rpc:call(node(),file,make_dir,[Dir],5000),
+    %% Clone
+    {ok,ProviderSpec}=sd:call(dbetcd_appl,db_deploy,read,[provider_spec,DeploymentId],5000),
+    {ok,GitPath}=sd:call(?DBETCD,db_provider_spec,read,[git_path,ProviderSpec],5000),
+    CloneInfo=rpc:call(node(),os,cmd,["git clone "++GitPath++" "++Dir],5000),
+    %% Create ErlangVm
+    {ok,HostSpec}=sd:call(dbetcd_appl,db_deploy,read,[host_spec,DeploymentId],5000),
+    {ok,HostName}=sd:call(dbetcd_appl,db_host_spec,read,[hostname,HostSpec],5000),
+    {ok,NodeName}=sd:call(dbetcd_appl,db_deploy,read,[node_name,DeploymentId],5000),
+ %   io:format("HostName,NodeName,ErlArgs ~p~n",[{HostName,NodeName,ErlArgs,?MODULE,?FUNCTION_NAME,?LINE}]),
+    {ok,ProviderNode}=slave:start(HostName,NodeName,ErlArgs),
+ 
+   %% Create Dir
+ %   ok=rpc:call(ProviderNode,file,make_dir,[Dir],5000),
+    %% Clone
+%    CloneInfo=rpc:call(ProviderNode,os,cmd,["git clone "++GitPath++" "++Dir],5000),
+    %% Load App
+    {ok,App}=sd:call(?DBETCD,db_provider_spec,read,[app,ProviderSpec],5000),
+    ok=rpc:call(ProviderNode,application,load,[App],5000),
+    %% start App
+    ok=rpc:call(ProviderNode,application,start,[App],5000),
+    pong=net_adm:ping(ProviderNode),
+    ok.
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+ssh_load_start(DeploymentId)->
+    
+    CookieStr=atom_to_list(erlang:get_cookie()),
+    {ok,Dir}=sd:call(dbetcd_appl,db_deploy,read,[dir,DeploymentId],5000),
+    %% TBD PaArgs needs to adjusted in db_provider_Spec 
+    PaArgs="-pa "++Dir++"/ebin"++" "++" -config "++Dir++"/config/sys.config",
+    EnvArgs=" ",
+    ErlArgs=PaArgs++" "++"-setcookie "++CookieStr++" "++EnvArgs,
+   
+
+
     % Need to create everything befor start the vm becaudse of config
     %% Create Dir
     ok=rpc:call(node(),file,make_dir,[Dir],5000),

@@ -14,9 +14,11 @@
 -define(LockTimeout, 2*?SleepInterval).
 -define(InfraDeploymentSpec,"infra").
 -define(InfraApps,[dbetcd_appl,kube_appl]).
+-define(Type,"provider").
 
 %% API
 -export([
+	 create_deployments/1,
 	 start_infra_providers/0,
 
 	 update_deployment/1,
@@ -26,7 +28,7 @@
 
 	 is_wanted_state/0
 	]).
-
+% io:format("X ~p~n",[{X,?MODULE,?FUNCTION_NAME,?LINE}]),
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -35,15 +37,51 @@
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
+create_deployments(DeploymentSpec)->    
+    {DeploymentSpec,ProviderDeployments}=sd:call(dbetcd_appl,db_deployment_spec,read,[DeploymentSpec],5000),
+    Result=[lib_provider2:create_deployment(ProviderSpec,HostSpec,?Type)||{ProviderSpec,HostSpec}<-ProviderDeployments],
+    Result.
+    
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+    
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
 start_infra_providers()->
     InfraDeployIds=get_infra_deploy(),
-    {ok,InfraDeployIds}.
+    io:format("InfraDeployIds ~p~n",[{InfraDeployIds,?MODULE,?FUNCTION_NAME,?LINE}]),
+    DeploymentStatus_Id=[{lib_provider2:is_deployed(DeploymentId),DeploymentId}||DeploymentId<-InfraDeployIds],
+    StartResult=[{rpc:call(node(),lib_provider2,load_start_ssh,[DeploymentId],5000),DeploymentId}||{false,DeploymentId}<-DeploymentStatus_Id],
+    
+    StartResult.
+  
+    
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
 
 get_infra_deploy()->
     AllDeployId=sd:call(dbetcd_appl,db_deploy,get_all_id,[],5000),
     DeployId_ProviderSpecResult=[{DeployId,sd:call(dbetcd_appl,db_deploy,read,[provider_spec,DeployId],5000)}||DeployId<-AllDeployId],
     get_infra_deploy(DeployId_ProviderSpecResult).
-
 
 get_infra_deploy(L)->
     get_infra_deploy(L,[]).

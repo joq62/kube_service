@@ -17,6 +17,8 @@
 %% --------------------------------------------------------------------
 
 -define(DeploymentSpec,"test").
+
+%io:format("X ~p~n",[{X,?MODULE,?FUNCTION_NAME,?LINE}]),
 %% --------------------------------------------------------------------
 %% Function: available_hosts()
 %% Description: Based on hosts.config file checks which hosts are avaible
@@ -26,7 +28,7 @@ start()->
    
     ok=setup(),
  %   ok=test1(),
-    ok=test2(),
+ %   ok=test2(),
     ok=test3(),
 
     io:format("Test OK !!! ~p~n",[?MODULE]),
@@ -42,7 +44,13 @@ start()->
 %%--------------------------------------------------------------------
 test3()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
-    kuk=orchestrate2:start_infra_providers(),
+    
+    [{ok,_},{ok,_}]=orchestrate2:create_deployments("infra"),  
+    io:format("AllIds ~p~n",[{sd:call(dbetcd_appl,db_deploy,get_all_id,[],5000),?MODULE,?FUNCTION_NAME,?LINE}]),
+    X=orchestrate2:start_infra_providers(),
+    io:format("X ~p~n",[{X,?MODULE,?FUNCTION_NAME,?LINE}]),
+    timer:sleep(2000),
+    init:stop(),
     
     ok.
 %%--------------------------------------------------------------------
