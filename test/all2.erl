@@ -77,23 +77,23 @@ test3()->
      {_,_}
     }=sd:call(dbetcd_appl,db_deploy,read,[DeploymentId_1],5000),
 
-    rpc:call(adder_1_provider@c200,init,stop,[],5000),
-    true=ops_ssh:check_stopped_node(Node),
- %   kuk=my_ssh:ssh_send("192.168.1.200",22,"ubuntu","festum01","rm -r "++Dir,5000),
+    R1=ops_ssh:call(HostSpec,"rm -rf "++Dir,5000),
+    TestNode=adder_1_provider@c200,
+    rpc:call(TestNode,init,stop,[],5000),
+    true=ops_ssh:check_stopped_node(TestNode),
+    R3=ops_ssh:call(HostSpec,"mkdir "++Dir,5000),
+    
+    io:format("Cookie ~p~n",[{erlang:get_cookie(node()),?MODULE,?FUNCTION_NAME,?LINE}]),
+   % R2=lib_provider2:ssh_load_start(DeploymentId_1),
+    R2=lib_provider2:load_start(DeploymentId_1),
+ %   R2=ops_ssh:call(HostSpec,"erl -sname adder_1_provider -setcookie a_cookie -detached",5*5000),
+    io:format("R1,R2,R3 ~p~n",[{R1,R2,R3,?MODULE,?FUNCTION_NAME,?LINE}]),
+    true=ops_ssh:check_started_node(TestNode),
 
-%    R1=my_ssh:ssh_send("192.168.1.200",22,"ubuntu","festum01","pwd "++Dir,5000),
- %   R2=my_ssh:ssh_send("192.168.1.201",22,"ubuntu","festum01","pwd "++Dir,5000),
-    R1=rpc:call(node(),ops_ssh,call,[HostSpec,"pwd",7000],8000),
-    R2=rpc:call(node(),ops_ssh,call,[HostSpec,"date",7000],8000),
- %   ok=ops_ssh:delete_dir(HostSpec,Dir),
- %   timer:sleep(3000),
-  %  R2=ops_ssh:call(HostSpec,"pwd",2*5000),
-    io:format("R1,R2 ~p~n",[{R1,R2,?MODULE,?FUNCTION_NAME,?LINE}]),
-    kuk=R1,
+ %   R2=lib_provider2:ssh_load_start(DeploymentId_1),
+ %   true=ops_ssh:check_started_node(TestNode),
  
- %   R=lib_provider2:ssh_load_start(DeploymentId_1),
- 
- %   42=sd:call(adder,adder,add,[20,22],5000),
+    42=sd:call(adder,adder,add,[20,22],5000),
     
 
     
