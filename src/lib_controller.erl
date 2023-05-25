@@ -7,7 +7,7 @@
 %%% 
 %%% Created : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(lib_provider2).
+-module(lib_controller).
  
 
 %% --------------------------------------------------------------------
@@ -38,10 +38,6 @@
 	 dir/1
 	]).
 
--export([
-	 local_load_start/1,
-	 ssh_load_start/1
-	]).
 
 %io:format("DeploymentId ~p~n",[{DeploymentId,?MODULE,?FUNCTION_NAME,?LINE}]),
 %% ====================================================================
@@ -150,32 +146,34 @@ local_load_start(DeploymentId)->
 %% @end
 %%--------------------------------------------------------------------
 ssh_load_start(DeploymentId)->
-    % Need to create everything befor start the vm becaudse of config
-    %% Create Dir
-    %% ok=rpc:call(node(),file,make_dir,[Dir],5000),
-    {ok,HostSpec}=sd:call(dbetcd_appl,db_deploy,read,[host_spec,DeploymentId],5000),
-    {ok,Dir}=sd:call(dbetcd_appl,db_deploy,read,[dir,DeploymentId],5000),
-    {ok,Dir}=ops_ssh:create_dir(HostSpec,Dir),
-   %% Clone
-    {ok,ProviderSpec}=sd:call(dbetcd_appl,db_deploy,read,[provider_spec,DeploymentId],5000),
-    {ok,GitPath}=sd:call(?DBETCD,db_provider_spec,read,[git_path,ProviderSpec],5000),
-    io:format("GitPath ~p~n",[{GitPath,?MODULE,?FUNCTION_NAME,?LINE}]), 
-    %%CloneInfo=rpc:call(node(),os,cmd,["git clone "++GitPath++" "++Dir],5000),  
-   
-    CloneInfo=ops_ssh:call(HostSpec,"git clone "++GitPath++" "++Dir,3*5000),
-    io:format("CloneInfo ~p~n",[{CloneInfo,?MODULE,?FUNCTION_NAME,?LINE}]),
-    %% Create ErlangVm
+    
     CookieStr=atom_to_list(erlang:get_cookie()),
+    {ok,Dir}=sd:call(dbetcd_appl,db_deploy,read,[dir,DeploymentId],5000),
     %% TBD PaArgs needs to adjusted in db_provider_Spec 
     PaArgs="-pa "++Dir++"/ebin"++" "++" -config "++Dir++"/config/sys.config",
-    EnvArgs=" -setcookie "++CookieStr++" "++"-detached",
-    %   ErlArgs=PaArgs++" "++"-setcookie "++CookieStr++" "++EnvArgs,
+    EnvArgs=" ",
+    ErlArgs=PaArgs++" "++"-setcookie "++CookieStr++" "++EnvArgs,
+   
+
+
+    % Need to create everything befor start the vm becaudse of config
+    %% Create Dir
+    ok=rpc:call(node(),file,make_dir,[Dir],5000),
+    %% Clone
+    {ok,ProviderSpec}=sd:call(dbetcd_appl,db_deploy,read,[provider_spec,DeploymentId],5000),
+    {ok,GitPath}=sd:call(?DBETCD,db_provider_spec,read,[git_path,ProviderSpec],5000),
+    CloneInfo=rpc:call(node(),os,cmd,["git clone "++GitPath++" "++Dir],5000),
+    %% Create ErlangVm
+    {ok,HostSpec}=sd:call(dbetcd_appl,db_deploy,read,[host_spec,DeploymentId],5000),
     {ok,HostName}=sd:call(dbetcd_appl,db_host_spec,read,[hostname,HostSpec],5000),
     {ok,NodeName}=sd:call(dbetcd_appl,db_deploy,read,[node_name,DeploymentId],5000),
-
-%    {ok,ProviderNode}=slave:start(HostName,NodeName,ErlArgs),
-    {ok,ProviderNode}=ops_ssh:create(HostSpec,NodeName,CookieStr,PaArgs,EnvArgs),
-   
+ %   io:format("HostName,NodeName,ErlArgs ~p~n",[{HostName,NodeName,ErlArgs,?MODULE,?FUNCTION_NAME,?LINE}]),
+    {ok,ProviderNode}=slave:start(HostName,NodeName,ErlArgs),
+ 
+   %% Create Dir
+ %   ok=rpc:call(ProviderNode,file,make_dir,[Dir],5000),
+    %% Clone
+%    CloneInfo=rpc:call(ProviderNode,os,cmd,["git clone "++GitPath++" "++Dir],5000),
     %% Load App
     {ok,App}=sd:call(?DBETCD,db_provider_spec,read,[app,ProviderSpec],5000),
     ok=rpc:call(ProviderNode,application,load,[App],5000),

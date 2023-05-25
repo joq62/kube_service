@@ -5,9 +5,9 @@
               {mod,{kube_service_app,[]}},
               {applications,[kernel,stdlib]},
               {env,[]},
-              {modules,[common,host_server,kube,kube_app,kube_server,
-                        kube_service_app,kube_service_sup,kube_sup,lib_host,
-                        lib_orchestrate,lib_provider,lib_provider2,ops_ssh,
-                        orchestrate,orchestrate2]},
+              {modules,[host_server,kube,kube_app,kube_server,
+                        kube_service_app,kube_service_sup,kube_sup,
+                        lib_controller,lib_host,lib_orchestrate,lib_provider,
+                        lib_provider2,ops_ssh,orchestrate,orchestrate2]},
               {licenses,["Apache-2.0"]},
               {links,[]}]}.

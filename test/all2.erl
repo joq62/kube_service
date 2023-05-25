@@ -32,8 +32,8 @@ start()->
     ok=test3(),
 
     io:format("Test OK !!! ~p~n",[?MODULE]),
-    timer:sleep(2000),
-    init:stop(),
+ %   timer:sleep(2000),
+ %   init:stop(),
     ok.
 
 
@@ -42,7 +42,7 @@ start()->
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
-test3()->
+test4()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
     
     [{ok,_},{ok,_}]=orchestrate2:create_deployments("infra"),  
@@ -51,6 +51,56 @@ test3()->
     io:format("X ~p~n",[{X,?MODULE,?FUNCTION_NAME,?LINE}]),
     timer:sleep(2000),
     init:stop(),
+    
+    ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+test3()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
+    HostSpec="c200", 
+  
+
+    Node=adder_1_provider@c200,
+    Dir="adder_1_provider",
+    {ok,DeploymentId_1}=lib_provider2:create_deployment("adder",HostSpec,"provider","adder_1_provider"),
+ {
+     "adder_1_provider",
+     "adder",
+     "adder_1_provider",
+     "adder_1_provider",
+     adder_1_provider@c200,
+     "c200",
+     {_,_}
+    }=sd:call(dbetcd_appl,db_deploy,read,[DeploymentId_1],5000),
+
+    rpc:call(adder_1_provider@c200,init,stop,[],5000),
+    true=ops_ssh:check_stopped_node(Node),
+ %   kuk=my_ssh:ssh_send("192.168.1.200",22,"ubuntu","festum01","rm -r "++Dir,5000),
+
+%    R1=my_ssh:ssh_send("192.168.1.200",22,"ubuntu","festum01","pwd "++Dir,5000),
+ %   R2=my_ssh:ssh_send("192.168.1.201",22,"ubuntu","festum01","pwd "++Dir,5000),
+    R1=rpc:call(node(),ops_ssh,call,[HostSpec,"pwd",7000],8000),
+    R2=rpc:call(node(),ops_ssh,call,[HostSpec,"date",7000],8000),
+ %   ok=ops_ssh:delete_dir(HostSpec,Dir),
+ %   timer:sleep(3000),
+  %  R2=ops_ssh:call(HostSpec,"pwd",2*5000),
+    io:format("R1,R2 ~p~n",[{R1,R2,?MODULE,?FUNCTION_NAME,?LINE}]),
+    kuk=R1,
+ 
+ %   R=lib_provider2:ssh_load_start(DeploymentId_1),
+ 
+ %   42=sd:call(adder,adder,add,[20,22],5000),
+    
+
+    
+  %  io:format("X ~p~n",[{X,?MODULE,?FUNCTION_NAME,?LINE}]),
+  %  timer:sleep(2000),
+  
+%  init:stop(),
     
     ok.
 %%--------------------------------------------------------------------
