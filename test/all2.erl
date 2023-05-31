@@ -81,6 +81,12 @@ ssh_test()->
     ok=rpc:call(N1,application,start,[adder],5000),
     42=sd:call(adder,adder,add,[20,22],5000),
     
+    ok=rpc:call(N1,application,stop,[adder],5000),
+    {error,["No node available for app : ",adder,sd,_]}=sd:call(adder,adder,add,[20,22],5000),
+    ok=rpc:call(N1,application,unload,[adder],5000),
+    true=ssh_test_lib:stop_node(NodeName1,HostSpec),
+    false=ssh_test_lib:is_running(NodeName1,HostSpec),
+
     ok.
 
 %%--------------------------------------------------------------------
