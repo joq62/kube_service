@@ -76,6 +76,9 @@ eunit:
 	rm -rf log_service;
 	git clone https://github.com/joq62/log_service.git;
 	erlc -I include -I ../api_repo -o test_ebin log_service/src/*.erl;
+	rm -rf ssh_service;
+	git clone https://github.com/joq62/ssh_service.git;
+	erlc -I include -I ../api_repo -o test_ebin ssh_service/src/*.erl;
 #	dbetcd_appl
 	rm -rf dbetcd_appl;	
 	git clone https://github.com/joq62/dbetcd_appl;

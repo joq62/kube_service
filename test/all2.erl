@@ -27,15 +27,61 @@
 start()->
    
     ok=setup(),
+
+    ok=ssh_test(),
  %   ok=test1(),
  %   ok=test2(),
-    ok=test3(),
+ %   ok=test3(),
 
     io:format("Test OK !!! ~p~n",[?MODULE]),
  %   timer:sleep(2000),
  %   init:stop(),
     ok.
 
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+ssh_test()->
+    io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME}]),
+    HostSpec="c50",
+    {ok,["/home/joq62"]}=ssh_server:send_msg(HostSpec,"pwd",5000),
+    %%
+   
+    NodeName1="n1",
+    Dir1=NodeName1,
+    NodeName2="n2",
+    Dir2=NodeName2,
+    NodeName3="n3",
+    Dir3=NodeName3,
+    %%
+    %% Start N1
+    Env0=" -detached",
+    {ok,N1}=ssh_test_lib:start_node(NodeName1,HostSpec,Env0),
+    true=ssh_test_lib:is_running(NodeName1,HostSpec),
+    pong=net_adm:ping(N1),
+    true=ssh_test_lib:stop_node(NodeName1,HostSpec),
+    false=ssh_test_lib:is_running(NodeName1,HostSpec),
+
+
+    %% Create dir and git clone
+    GitPath="https://github.com/joq62/adder.git",
+    
+    {ok,[]}=ssh_server:send_msg(HostSpec,"rm -rf "++Dir1,5*5000),
+    {ok,[]}=ssh_server:send_msg(HostSpec,"mkdir "++Dir1,5*5000),
+    {error,CloneInfo}=ssh_server:send_msg(HostSpec,"git clone "++" "++GitPath++" "++Dir1,5*5000),
+    io:format("CloneInfo ~p~n",[{CloneInfo,?MODULE,?FUNCTION_NAME,?LINE}]),
+
+    SysConfig1=filename:join([Dir1,"config","sys.config"]),
+    Env1=" -config "++SysConfig1++" "++"-detached",
+    {ok,N1}=ssh_test_lib:start_node(NodeName1,HostSpec,Env1),
+    Ebin1=filename:join([Dir1,"ebin"]),
+    true=rpc:call(N1,code,add_patha,[Ebin1],5000),
+    ok=rpc:call(N1,application,start,[adder],5000),
+    42=sd:call(adder,adder,add,[20,22],5000),
+    
+    ok.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -223,6 +269,9 @@ setup()->
     pong=common:ping(),
     pong=sd:ping(),
     pong=log:ping(),
+    {ok,_}=ssh_server:start_link(),
+    pong=ssh_server:ping(),
+    
  %   {ok,_}=kube:start_link(),
  %   pong=kube:ping(),
     []=sd:call(dbetcd_appl,db_deploy,read_all,[],6000),

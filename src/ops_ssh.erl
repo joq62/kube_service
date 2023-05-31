@@ -32,7 +32,7 @@
 	 create/5
 	]).
 	 
-
+%  io:format("SshResult ~p~n",[{SshResult,?MODULE,?FUNCTION_NAME,?LINE}]),
 %% ====================================================================
 %% External functions
 %% ====================================================================
@@ -63,14 +63,11 @@ create(HostSpec,NodeName,Cookie,PaArgs,EnvArgs)->
     Node=list_to_atom(NodeName++"@"++HostName),
     rpc:call(Node,init,stop,[],5000),
     true=check_stopped_node(100,Node,false),
-  %  Args=PaArgs++" "++"-setcookie "++Cookie++" "++EnvArgs,
-  %  LinuxCmd="erl -sname "++NodeName++" "++Args++" ",
     LinuxCmd="erl -sname "++NodeName++" -setcookie a_cookie "++" -detached ",
     Result=case call(HostSpec,LinuxCmd,TimeOut) of
 	       {badrpc,Reason}->
 		   {error,[{?MODULE,?LINE," ",badrpc,Reason}]};
 	       SshResult->
-		   io:format("SshResult ~p~n",[{SshResult,?MODULE,?FUNCTION_NAME,?LINE}]),
 		   case check_started_node(50,Node,false) of
 		       false->
 			   rpc:call(Node,init,stop,[],5000),
