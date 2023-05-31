@@ -10,6 +10,7 @@ all:
 	rm -rf cmn_service;
 	rm -rf sd_service;
 	rm -rf log_service;
+	rm -rf ssh_service;
 #	tests 
 	mkdir test_ebin;
 	erlc -I include -I ../api_repo -o test_ebin test/*.erl;
@@ -32,6 +33,7 @@ build:
 	rm -rf cmn_service;
 	rm -rf sd_service;
 	rm -rf log_service;
+	rm -rf ssh_service;
 	rm -f  rebar.lock;
 	mkdir ebin;		
 	rebar3 compile;	
@@ -51,6 +53,7 @@ clean:
 	rm -rf cmn_service;
 	rm -rf sd_service;
 	rm -rf log_service;
+	rm -rf ssh_service;
 
 
 eunit:
